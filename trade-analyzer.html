@@ -1,64 +1,55 @@
-<!DOCTYPE html>
-<html lang="uk">
-<head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Trade Analyzer</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:system-ui,sans-serif;font-size:14px;color:#1a1a1a;background:#f5f5f3;padding:1.5rem}
+body{font-family:var(--font-sans,sans-serif);font-size:14px;color:var(--color-text-primary);background:transparent;padding:1rem 0}
 h2{font-size:18px;font-weight:500;margin-bottom:1rem}
-h3{font-size:15px;font-weight:500;margin-bottom:.5rem;color:#555}
+h3{font-size:15px;font-weight:500;margin-bottom:.5rem;color:var(--color-text-secondary)}
 .steps{display:flex;gap:6px;margin-bottom:1.5rem;align-items:center}
-.step-dot{height:4px;flex:1;border-radius:2px;background:#ddd}
-.step-dot.active{background:#1a1a1a}
+.step-dot{height:4px;flex:1;border-radius:2px;background:var(--color-border-tertiary)}
+.step-dot.active{background:var(--color-text-primary)}
 .step-dot.done{background:#1a9e70}
-.step-lbl{font-size:11px;color:#888;white-space:nowrap}
-.wrap{max-width:800px;margin:0 auto;background:#fff;border-radius:14px;padding:1.5rem;border:0.5px solid #e0e0e0}
-.upload-zone{border:1.5px dashed #ccc;border-radius:12px;padding:1.5rem;text-align:center;cursor:pointer;margin-bottom:1rem;transition:background .15s}
-.upload-zone:hover{background:#f9f9f7}
+.step-lbl{font-size:11px;color:var(--color-text-secondary);white-space:nowrap}
+.upload-zone{border:1.5px dashed var(--color-border-secondary,#ccc);border-radius:12px;padding:1.5rem;text-align:center;cursor:pointer;margin-bottom:1rem}
+.upload-zone:hover{background:var(--color-background-secondary)}
 .upload-zone input{display:none}
 .file-list{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:1rem}
-.chip{background:#f5f5f3;border:0.5px solid #e0e0e0;border-radius:8px;padding:3px 8px;font-size:12px;display:flex;align-items:center;gap:5px}
+.chip{background:var(--color-background-secondary);border:0.5px solid var(--color-border-tertiary);border-radius:8px;padding:3px 8px;font-size:12px;display:flex;align-items:center;gap:5px}
 .rm{cursor:pointer;color:#c33;font-size:13px;line-height:1}
-.btn{padding:.45rem .9rem;border:0.5px solid #ccc;border-radius:8px;background:transparent;font-size:13px;cursor:pointer;font-weight:500;color:#1a1a1a}
-.btn:hover{background:#f5f5f3}
+.btn{padding:.45rem .9rem;border:0.5px solid var(--color-border-secondary);border-radius:8px;background:transparent;font-size:13px;cursor:pointer;font-weight:500;color:var(--color-text-primary)}
+.btn:hover{background:var(--color-background-secondary)}
 .btn:disabled{opacity:.4;cursor:default}
 .btn-full{width:100%;padding:.55rem}
 .btn-green{border-color:#1a9e70;color:#1a9e70}
 .seg{display:flex;gap:6px;margin-bottom:1rem}
-.seg-btn{flex:1;padding:.45rem;border:0.5px solid #ccc;border-radius:8px;cursor:pointer;text-align:center;font-size:13px;background:transparent;color:#888}
+.seg-btn{flex:1;padding:.45rem;border:0.5px solid var(--color-border-secondary);border-radius:8px;cursor:pointer;text-align:center;font-size:13px;background:transparent;color:var(--color-text-secondary)}
 .seg-btn.on{border-color:#1a9e70;color:#1a9e70;background:rgba(26,158,112,.06)}
-.card{border:0.5px solid #e0e0e0;border-radius:10px;padding:.75rem 1rem;margin-bottom:.75rem}
+.card{border:0.5px solid var(--color-border-tertiary);border-radius:10px;padding:.75rem 1rem;margin-bottom:.75rem}
 .dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;display:inline-block}
 .metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px;margin:1rem 0}
-.mc{background:#f5f5f3;border-radius:8px;padding:.6rem .9rem}
-.mc .lbl{font-size:10px;color:#888;text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px}
+.mc{background:var(--color-background-secondary);border-radius:8px;padding:.6rem .9rem}
+.mc .lbl{font-size:10px;color:var(--color-text-secondary);text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px}
 .mc .val{font-size:19px;font-weight:500}
 .pos{color:#1a9e70}.neg{color:#c94040}
-.tabs{display:flex;gap:0;margin-bottom:1rem;border-bottom:0.5px solid #e0e0e0}
-.tab{padding:.45rem 1rem;cursor:pointer;font-size:13px;color:#888;border-bottom:2px solid transparent;margin-bottom:-1px}
-.tab.on{color:#1a1a1a;border-bottom-color:#1a1a1a;font-weight:500}
+.tabs{display:flex;gap:0;margin-bottom:1rem;border-bottom:0.5px solid var(--color-border-tertiary)}
+.tab{padding:.45rem 1rem;cursor:pointer;font-size:13px;color:var(--color-text-secondary);border-bottom:2px solid transparent;margin-bottom:-1px}
+.tab.on{color:var(--color-text-primary);border-bottom-color:var(--color-text-primary);font-weight:500}
 table{width:100%;border-collapse:collapse;font-size:12px}
-th{text-align:left;padding:5px 6px;border-bottom:1px solid #e0e0e0;color:#888;font-weight:500}
-td{padding:5px 6px;border-bottom:0.5px solid #f0f0f0}
+th{text-align:left;padding:5px 6px;border-bottom:1px solid var(--color-border-tertiary);color:var(--color-text-secondary);font-weight:500}
+td{padding:5px 6px;border-bottom:0.5px solid var(--color-border-tertiary)}
 .section{margin-bottom:1.5rem}
 .bdg{display:inline-block;padding:1px 5px;border-radius:4px;font-size:11px;margin:1px;font-weight:500}
-.chart-wrap{position:relative;width:100%;height:200px;margin:.5rem 0}
-hr{border:none;border-top:0.5px solid #e0e0e0;margin:.75rem 0}
-.tog{width:34px;height:18px;border-radius:9px;background:#ccc;position:relative;cursor:pointer;flex-shrink:0;transition:background .2s}
+.chart-wrap{position:relative;width:100%;height:180px;margin:.5rem 0}
+hr{border:none;border-top:0.5px solid var(--color-border-tertiary);margin:.75rem 0}
+.tog{width:34px;height:18px;border-radius:9px;background:var(--color-border-tertiary);position:relative;cursor:pointer;flex-shrink:0;transition:background .2s}
 .tog.on{background:#1a9e70}
 .tog::after{content:'';position:absolute;width:14px;height:14px;border-radius:50%;background:#fff;top:2px;left:2px;transition:left .2s}
 .tog.on::after{left:18px}
 .row{display:flex;align-items:center;gap:8px}
-select{font-size:12px;padding:2px 4px;border:0.5px solid #ccc;border-radius:4px;background:#fff;color:#1a1a1a}
-input[type=text]{font-size:13px;padding:3px 6px;border:0.5px solid #ccc;border-radius:6px;background:#fff;color:#1a1a1a}
+select{font-size:12px;padding:2px 4px;border:0.5px solid var(--color-border-tertiary);border-radius:4px;background:var(--color-background-primary);color:var(--color-text-primary)}
+input[type=text]{font-size:13px;padding:3px 6px;border:0.5px solid var(--color-border-tertiary);border-radius:6px;background:var(--color-background-primary);color:var(--color-text-primary)}
 </style>
-</head>
-<body>
-<div class="wrap">
-  <div id="app"></div>
-</div>
+
+<div id="app"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
@@ -68,13 +59,14 @@ const TCOLS={ES:{bg:'#d4e9f7',fg:'#0a4c7a'},GC:{bg:'#faecd0',fg:'#7a4e00'},BTC:{
 const charts={};
 
 let S={
-  step:1,mode:'single',
-  rawFiles:{},strategies:[],
+  step:1, mode:'single',
+  rawFiles:{}, strategies:[],
   groups:[{id:'g0',name:'Група 1',ci:0,sids:[]},{id:'g1',name:'Група 2',ci:1,sids:[]}],
-  rotEnabled:false,rotPeriod:'monthly',rotGrpA:'g0',rotGrpB:'g1',
+  rotEnabled:false, rotPeriod:'monthly', rotGrpA:'g0', rotGrpB:'g1',
   accGrps:{A:['g0'],B:['g1']}
 };
 
+// ── utils ──
 function tickerOf(name){const m=name.match(/^([A-Z]+)_/);return m?m[1]:name.replace(/\.csv$/i,'').split('_')[0];}
 function parseDate(s){if(!s)return null;const d=new Date(s.trim().replace(' ','T'));return isNaN(d)?null:d;}
 function tradingDay(dt){if(!dt)return'?';return dt.toISOString().slice(0,10);}
@@ -83,6 +75,7 @@ function pclr(v){return v>=0?'#1a9e70':'#c94040';}
 function bdg(tk,lbl){const c=TCOLS[tk]||{bg:'#ebebeb',fg:'#555'};return`<span class="bdg" style="background:${c.bg};color:${c.fg}">${lbl||tk}</span>`;}
 function gid(){return'g'+Date.now()+Math.random().toString(36).slice(2,6);}
 
+// ── parse CSV ──
 function parseFile(filename,file,cb){
   Papa.parse(file,{header:true,skipEmptyLines:true,dynamicTyping:true,complete(res){
     const ticker=tickerOf(filename),trades=[];
@@ -98,16 +91,20 @@ function parseFile(filename,file,cb){
   }});
 }
 
+// ── analyze ──
 function analyze(tradeGroups){
   const all=[];
   tradeGroups.forEach(g=>g.trades.forEach(t=>all.push({...t,ticker:g.ticker})));
   all.sort((a,b)=>a.dt-b.dt);
   if(!all.length)return null;
+
   let cum=0;
   const equity=all.map(t=>{cum+=t.pnl;return parseFloat(cum.toFixed(2));});
   const wins=all.filter(t=>t.pnl>0),losses=all.filter(t=>t.pnl<0);
   const avgWin=wins.length?(wins.reduce((s,t)=>s+t.pnl,0)/wins.length):0;
   const avgLoss=losses.length?(losses.reduce((s,t)=>s+t.pnl,0)/losses.length):0;
+
+  // drawdowns
   let pk=0,pkIdx=0;const ddList=[];
   for(let i=0;i<equity.length;i++){
     if(equity[i]>=pk){pk=equity[i];pkIdx=i;}
@@ -124,6 +121,8 @@ function analyze(tradeGroups){
     const tmap={};seg.forEach(t=>{tmap[t.ticker]=(tmap[t.ticker]||0)+t.pnl;});
     return{...dd,tmap,startDate:all[dd.pkIdx]?.dt.toISOString().slice(0,10),botDate:all[dd.botIdx]?.dt.toISOString().slice(0,10)};
   });
+
+  // days
   const dayMap={};
   all.forEach(t=>{
     if(!dayMap[t.day])dayMap[t.day]={pnl:0,tickers:{}};
@@ -132,24 +131,33 @@ function analyze(tradeGroups){
   });
   const days=Object.entries(dayMap).map(([d,v])=>({day:d,pnl:v.pnl,tickers:v.tickers}));
   days.sort((a,b)=>a.pnl-b.pnl);
+
+  // tickers
   const tickerMap={};
   all.forEach(t=>{
     if(!tickerMap[t.ticker])tickerMap[t.ticker]={pnl:0,count:0,wins:0};
     tickerMap[t.ticker].pnl+=t.pnl;tickerMap[t.ticker].count++;
     if(t.pnl>0)tickerMap[t.ticker].wins++;
   });
+
   return{all,equity,totalPnl:cum,count:all.length,
     winRate:(wins.length/all.length*100).toFixed(1),avgWin,avgLoss,
     top5dd,worst5:days.slice(0,5),best5:days.slice(-5).reverse(),tickerMap};
 }
 
+// ── rotation ──
 function buildPeriods(startDt){
   const periods=[],end=new Date();end.setMonth(end.getMonth()+2);
   let d=new Date(startDt);
+  // normalize to start of day/week/month
+  if(S.rotPeriod==='daily'){d.setUTCHours(0,0,0,0);}
+  else if(S.rotPeriod==='weekly'){d.setUTCHours(0,0,0,0);d.setUTCDate(d.getUTCDate()-d.getUTCDay());}
+  else{d.setUTCHours(0,0,0,0);d.setUTCDate(1);}
   while(d<end){
     const s=new Date(d);
-    if(S.rotPeriod==='monthly'){d=new Date(d);d.setMonth(d.getMonth()+1);d.setDate(1);}
-    else{d=new Date(d);d.setDate(d.getDate()+7);}
+    if(S.rotPeriod==='daily'){d=new Date(d);d.setUTCDate(d.getUTCDate()+1);}
+    else if(S.rotPeriod==='weekly'){d=new Date(d);d.setUTCDate(d.getUTCDate()+7);}
+    else{d=new Date(d);d.setUTCMonth(d.getUTCMonth()+1);d.setUTCDate(1);}
     periods.push({s,e:new Date(d)});
   }
   return periods;
@@ -158,22 +166,27 @@ function periodIdx(dt,periods){for(let i=0;i<periods.length;i++)if(dt>=periods[i
 
 function getAccountTrades(accId){
   if(S.mode==='single')return S.strategies.map(s=>({ticker:s.ticker,trades:s.trades}));
+
   if(!S.rotEnabled){
     const res=[];
-    (S.accGrps[accId]||[]).forEach(gi=>{
-      const g=S.groups.find(x=>x.id===gi);if(!g)return;
+    (S.accGrps[accId]||[]).forEach(gid=>{
+      const g=S.groups.find(x=>x.id===gid);if(!g)return;
       g.sids.forEach(sid=>{const str=S.strategies.find(x=>x.id===sid);if(str)res.push({ticker:str.ticker,trades:str.trades});});
     });
     return res;
   }
+
+  // rotation
   const grpA=S.groups.find(g=>g.id===S.rotGrpA);
   const grpB=S.groups.find(g=>g.id===S.rotGrpB);
   if(!grpA||!grpB)return[];
+
   const grpTrades=grp=>{const arr=[];grp.sids.forEach(sid=>{const s=S.strategies.find(x=>x.id===sid);if(s)s.trades.forEach(t=>arr.push({...t,ticker:s.ticker}));});return arr;};
   const tA=grpTrades(grpA).map(t=>({...t,src:'A'}));
   const tB=grpTrades(grpB).map(t=>({...t,src:'B'}));
   const all=[...tA,...tB].sort((a,b)=>a.dt-b.dt);
   if(!all.length)return[];
+
   const periods=buildPeriods(all[0].dt);
   const filtered=all.filter(t=>{
     const pi=periodIdx(t.dt,periods);
@@ -186,11 +199,13 @@ function getAccountTrades(accId){
   return Object.entries(grouped).map(([ticker,trades])=>({ticker,trades}));
 }
 
+// ── render blocks ──
 function renderAccountBlock(tg,cid){
   const data=analyze(tg);
   const c=document.getElementById(cid);
   if(!c)return;
-  if(!data||!data.count){c.innerHTML='<p style="color:#888;font-size:13px;padding:.5rem 0">Немає трейдів.</p>';return;}
+  if(!data||!data.count){c.innerHTML='<p style="color:var(--color-text-secondary);font-size:13px;padding:.5rem 0">Немає трейдів.</p>';return;}
+
   c.innerHTML=`
     <div class="metrics" id="${cid}_m"></div>
     <div class="section"><h3>Equity curve</h3><div class="chart-wrap"><canvas id="${cid}_cv"></canvas></div></div>
@@ -241,12 +256,14 @@ function renderAccountBlock(tg,cid){
     tkb.innerHTML+=`<tr><td>${bdg(t)}</td><td>${v.count}</td><td style="color:${pclr(v.pnl)};font-weight:500">${fmt(v.pnl)}</td><td>${(v.wins/v.count*100).toFixed(1)}%</td></tr>`;
   });
 
+  // last 20 trades
   const last20=data.all.slice(-20).reverse();
   const l20el=document.getElementById(cid+'_l20');
+  let cumCheck=data.equity[data.all.length-1];
   last20.forEach((t,i)=>{
     const eqVal=data.equity[data.all.length-1-i];
     l20el.innerHTML+=`<tr>
-      <td style="color:#888;font-size:11px">${t.dt.toISOString().replace('T',' ').slice(0,16)}</td>
+      <td style="color:var(--color-text-secondary);font-size:11px">${t.dt.toISOString().replace('T',' ').slice(0,16)}</td>
       <td>${bdg(t.ticker)}</td>
       <td style="color:${pclr(t.pnl)};font-weight:500">${fmt(t.pnl)}</td>
       <td style="color:${pclr(eqVal)}">${fmt(eqVal)}</td>
@@ -254,6 +271,7 @@ function renderAccountBlock(tg,cid){
   });
 }
 
+// ── STEPS ──
 function stepDots(){
   const names=S.mode==='single'?['Завантаження','Результати']:['Завантаження','Групи','Акаунти','Результати'];
   const maxStep=names.length;
@@ -270,12 +288,11 @@ function step1HTML(){
   return`<h2>Завантаження стратегій</h2>
   <div class="upload-zone" id="dz" onclick="document.getElementById('fi').click()">
     <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-    <p style="color:#888;font-size:12px;margin-top:.3rem">Завантажити CSV з TradingView (кілька файлів)</p>
-    <p style="font-size:11px;color:#aaa;margin-top:4px">Клацни або перетягни сюди</p>
+    <p style="color:var(--color-text-secondary);font-size:12px;margin-top:.3rem">Завантажити CSV з TradingView (кілька файлів)</p>
     <input type="file" id="fi" multiple accept=".csv">
   </div>
   <div class="file-list">${chips}</div>
-  <p style="font-size:12px;color:#888;margin-bottom:.5rem">Режим:</p>
+  <p style="font-size:12px;color:var(--color-text-secondary);margin-bottom:.5rem">Режим:</p>
   <div class="seg">
     <div class="seg-btn ${S.mode==='single'?'on':''}" data-mode="single">Один рахунок</div>
     <div class="seg-btn ${S.mode==='multi'?'on':''}" data-mode="multi">Два рахунки / групи</div>
@@ -288,21 +305,23 @@ function step2HTML(){
     const ag=S.groups.find(g=>g.sids.includes(s.id));
     const opts=S.groups.map(g=>`<option value="${g.id}" ${ag?.id===g.id?'selected':''}>${g.name}</option>`).join('')+`<option value="" ${!ag?'selected':''}>— без групи —</option>`;
     return`<div class="row" style="padding:4px 0">
-      ${bdg(s.ticker)} <span style="flex:1;font-size:12px;color:#888">${s.filename}</span>
+      ${bdg(s.ticker)} <span style="flex:1;font-size:12px;color:var(--color-text-secondary)">${s.filename}</span>
       <select data-sid="${s.id}" class="gsel">${opts}</select></div>`;
   }).join('');
-  const grpCards=S.groups.map(g=>{
+
+  const grpCards=S.groups.map((g,gi)=>{
     const strs=S.strategies.filter(s=>g.sids.includes(s.id));
     const col=GCOLS[g.ci%GCOLS.length];
     return`<div class="card">
       <div class="row" style="margin-bottom:4px">
         <span class="dot" style="background:${col}"></span>
-        <input type="text" class="gnm" data-gid="${g.id}" value="${g.name}" style="flex:1;border:none;background:transparent;font-size:13px;font-weight:500;outline:none">
+        <input type="text" class="gnm" data-gid="${g.id}" value="${g.name}" style="flex:1;border:none;background:transparent;font-size:13px;font-weight:500;outline:none;color:var(--color-text-primary)">
         ${S.groups.length>1?`<span class="rm" data-rmg="${g.id}" style="font-size:11px">видалити</span>`:''}
       </div>
-      <p style="font-size:12px;color:#888">${strs.length?strs.map(s=>bdg(s.ticker)).join(''):'— порожня —'} (${strs.length} стратегій)</p>
+      <p style="font-size:12px;color:var(--color-text-secondary)">${strs.length?strs.map(s=>bdg(s.ticker)).join(''):'— порожня —'} (${strs.length} стратегій)</p>
     </div>`;
   }).join('');
+
   return`<h2>Розподіл по групах</h2>
   <div style="margin-bottom:1rem">${stratRows}</div>
   <hr>
@@ -318,11 +337,12 @@ function step3HTML(){
   const grpOpts=(sel)=>S.groups.map(g=>`<option value="${g.id}" ${g.id===sel?'selected':''}>${g.name}</option>`).join('');
   const rotBlock=S.rotEnabled?`
     <div style="margin-top:.75rem">
-      <div class="row" style="margin-bottom:.5rem;font-size:12px;color:#888">Рахунок A починає з:</div>
+      <div class="row" style="margin-bottom:.5rem;font-size:12px;color:var(--color-text-secondary)">Рахунок A починає з:</div>
       <select id="rot-a">${grpOpts(S.rotGrpA)}</select>
-      <p style="font-size:11px;color:#aaa;margin-top:4px">Рахунок B стартує з іншої групи. Далі — чергуються.</p>
-      <div class="row" style="margin-top:.75rem;margin-bottom:.3rem;font-size:12px;color:#888">Період ротації:</div>
-      <div class="seg" style="max-width:280px">
+      <p style="font-size:11px;color:var(--color-text-secondary);margin-top:4px">Рахунок B стартує з іншої групи. Далі — чергуються.</p>
+      <div class="row" style="margin-top:.75rem;margin-bottom:.3rem;font-size:12px;color:var(--color-text-secondary)">Період ротації:</div>
+      <div class="seg" style="max-width:360px">
+        <div class="seg-btn ${S.rotPeriod==='daily'?'on':''}" data-period="daily">Денна</div>
         <div class="seg-btn ${S.rotPeriod==='weekly'?'on':''}" data-period="weekly">Тижнева</div>
         <div class="seg-btn ${S.rotPeriod==='monthly'?'on':''}" data-period="monthly">Місячна</div>
       </div>
@@ -334,6 +354,7 @@ function step3HTML(){
       </div>`).join('');
       return`<div class="card"><p style="font-weight:500;margin-bottom:.4rem;font-size:13px">Рахунок ${acc}</p>${rows}</div>`;
     }).join('');
+
   return`<h2>Налаштування рахунків</h2>
   <div class="row" style="margin-bottom:.75rem">
     <div class="tog ${S.rotEnabled?'on':''}" id="rot-tog"></div>
@@ -360,6 +381,7 @@ function step4HTML(){
   <button class="btn btn-full" id="btn-back" style="margin-top:1rem">← Назад</button>`;
 }
 
+// ── main render ──
 function render(){
   const app=document.getElementById('app');
   let html='';
@@ -385,11 +407,13 @@ function render(){
 function bind(){
   const fi=document.getElementById('fi');
   if(fi)fi.addEventListener('change',e=>{[...e.target.files].forEach(f=>S.rawFiles[f.name]=f);render();});
+
   const dz=document.getElementById('dz');
   if(dz){
     dz.addEventListener('dragover',e=>e.preventDefault());
     dz.addEventListener('drop',e=>{e.preventDefault();[...e.dataTransfer.files].forEach(f=>S.rawFiles[f.name]=f);render();});
   }
+
   document.querySelectorAll('.rm[data-rm]').forEach(el=>el.addEventListener('click',e=>{
     e.stopPropagation();delete S.rawFiles[el.dataset.rm];
     S.strategies=S.strategies.filter(s=>s.filename!==el.dataset.rm);
@@ -416,10 +440,12 @@ function bind(){
     S.rotGrpB=S.groups.find(g=>g.id!==ra.value)?.id||S.groups[0]?.id;
   });
   document.querySelectorAll('input[data-acc]').forEach(el=>el.addEventListener('change',()=>{
-    const acc=el.dataset.acc,gi=el.dataset.gid;
-    if(el.checked){if(!S.accGrps[acc].includes(gi))S.accGrps[acc].push(gi);}
-    else S.accGrps[acc]=S.accGrps[acc].filter(x=>x!==gi);
+    const acc=el.dataset.acc,gid=el.dataset.gid;
+    if(el.checked){if(!S.accGrps[acc].includes(gid))S.accGrps[acc].push(gid);}
+    else S.accGrps[acc]=S.accGrps[acc].filter(x=>x!==gid);
   }));
+
+  // tabs
   document.querySelectorAll('.tab').forEach(tab=>tab.addEventListener('click',()=>{
     document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));
     tab.classList.add('on');
@@ -427,12 +453,14 @@ function bind(){
     const p=document.getElementById('p'+tab.dataset.tab);
     if(p)p.style.display='';
   }));
+
   const bb=document.getElementById('btn-back');
   if(bb)bb.addEventListener('click',()=>{
     if(S.mode==='single')S.step=1;
     else S.step=Math.max(1,S.step-1);
     render();
   });
+
   const bn=document.getElementById('btn-next');
   if(bn)bn.addEventListener('click',()=>{
     if(S.step===1){
@@ -458,5 +486,3 @@ function advance(){
 
 render();
 </script>
-</body>
-</html>
