@@ -1,28 +1,22 @@
-<!DOCTYPE html>
-<html lang="uk">
-<head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Trade Analyzer</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:system-ui,sans-serif;font-size:14px;color:#1a1a1a;background:#f5f5f3;padding:1.5rem}
+body{font-family:var(--font-sans,sans-serif);font-size:14px;color:var(--color-text-primary,#1a1a1a);background:transparent;padding:1rem 0}
 h2{font-size:18px;font-weight:500;margin-bottom:1rem}
-h3{font-size:15px;font-weight:500;margin-bottom:.5rem;color:#555}
+h3{font-size:15px;font-weight:500;margin-bottom:.5rem;color:var(--color-text-secondary,#555)}
 .steps{display:flex;gap:6px;margin-bottom:1.5rem;align-items:center}
 .step-dot{height:4px;flex:1;border-radius:2px;background:#ccc}
-.step-dot.active{background:#1a1a1a}
+.step-dot.active{background:var(--color-text-primary,#1a1a1a)}
 .step-dot.done{background:#1a9e70}
 .step-lbl{font-size:11px;color:#888;white-space:nowrap;margin-left:4px}
-.wrap{max-width:800px;margin:0 auto;background:#fff;border-radius:14px;padding:1.5rem;border:0.5px solid #e0e0e0}
 .upload-zone{border:1.5px dashed #aaa;border-radius:12px;padding:1.5rem;text-align:center;cursor:pointer;margin-bottom:1rem}
-.upload-zone:hover{background:#f9f9f7}
+.upload-zone:hover{background:rgba(0,0,0,.03)}
 .upload-zone input{display:none}
 .file-list{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:1rem}
-.chip{background:#f5f5f3;border:0.5px solid #ddd;border-radius:8px;padding:3px 8px;font-size:12px;display:flex;align-items:center;gap:5px}
+.chip{background:rgba(0,0,0,.04);border:0.5px solid #ddd;border-radius:8px;padding:3px 8px;font-size:12px;display:flex;align-items:center;gap:5px}
 .rm{cursor:pointer;color:#c33;font-size:13px;line-height:1;flex-shrink:0}
-.btn{padding:.45rem .9rem;border:0.5px solid #bbb;border-radius:8px;background:transparent;font-size:13px;cursor:pointer;font-weight:500;color:#1a1a1a}
-.btn:hover{background:#f5f5f3}
+.btn{padding:.45rem .9rem;border:0.5px solid #bbb;border-radius:8px;background:transparent;font-size:13px;cursor:pointer;font-weight:500;color:var(--color-text-primary,#1a1a1a)}
+.btn:hover{background:rgba(0,0,0,.04)}
 .btn:disabled{opacity:.4;cursor:default}
 .btn-full{width:100%;padding:.55rem}
 .btn-green{border-color:#1a9e70;color:#1a9e70}
@@ -32,13 +26,13 @@ h3{font-size:15px;font-weight:500;margin-bottom:.5rem;color:#555}
 .card{border:0.5px solid #ddd;border-radius:10px;padding:.75rem 1rem;margin-bottom:.75rem}
 .dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;display:inline-block}
 .metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px;margin:1rem 0}
-.mc{background:#f5f5f3;border-radius:8px;padding:.6rem .9rem}
+.mc{background:rgba(0,0,0,.04);border-radius:8px;padding:.6rem .9rem}
 .mc .lbl{font-size:10px;color:#888;text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px}
 .mc .val{font-size:19px;font-weight:500}
 .pos{color:#1a9e70}.neg{color:#c94040}
 .tabs{display:flex;margin-bottom:1rem;border-bottom:0.5px solid #ddd}
 .tab{padding:.45rem 1rem;cursor:pointer;font-size:13px;color:#888;border-bottom:2px solid transparent;margin-bottom:-1px}
-.tab.on{color:#1a1a1a;border-bottom-color:#1a1a1a;font-weight:500}
+.tab.on{color:var(--color-text-primary,#1a1a1a);border-bottom-color:var(--color-text-primary,#1a1a1a);font-weight:500}
 table{width:100%;border-collapse:collapse;font-size:12px}
 th{text-align:left;padding:5px 6px;border-bottom:1px solid #ddd;color:#888;font-weight:500}
 td{padding:5px 6px;border-bottom:0.5px solid #f0f0ee}
@@ -51,14 +45,10 @@ hr{border:none;border-top:0.5px solid #ddd;margin:.75rem 0}
 .tog::after{content:'';position:absolute;width:16px;height:16px;border-radius:50%;background:#fff;top:2px;left:2px;transition:left .2s;box-shadow:0 1px 3px rgba(0,0,0,.3)}
 .tog.on::after{left:18px}
 .row{display:flex;align-items:center;gap:8px}
-select{font-size:12px;padding:2px 4px;border:0.5px solid #ccc;border-radius:4px;background:#fff;color:#1a1a1a}
-input[type=text]{font-size:13px;padding:3px 6px;border:0.5px solid #ccc;border-radius:6px;background:#fff;color:#1a1a1a}
+select{font-size:12px;padding:2px 4px;border:0.5px solid #ccc;border-radius:4px;background:var(--color-background-primary,#fff);color:var(--color-text-primary,#1a1a1a)}
+input[type=text]{font-size:13px;padding:3px 6px;border:0.5px solid #ccc;border-radius:6px;background:var(--color-background-primary,#fff);color:var(--color-text-primary,#1a1a1a)}
 </style>
-</head>
-<body>
-<div class="wrap">
-  <div id="app"></div>
-</div>
+<div id="app"></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script>
@@ -107,6 +97,7 @@ function analyze(tGroups){
   const wins=all.filter(t=>t.pnl>0),losses=all.filter(t=>t.pnl<0);
   const avgWin=wins.length?wins.reduce((s,t)=>s+t.pnl,0)/wins.length:0;
   const avgLoss=losses.length?losses.reduce((s,t)=>s+t.pnl,0)/losses.length:0;
+
   let pk=0,pkIdx=0;const ddList=[];
   for(let i=0;i<equity.length;i++){
     if(equity[i]>=pk){pk=equity[i];pkIdx=i;}
@@ -123,6 +114,7 @@ function analyze(tGroups){
     const tmap={};seg.forEach(t=>{tmap[t.ticker]=(tmap[t.ticker]||0)+t.pnl;});
     return{...dd,tmap,startDate:all[dd.pkIdx]?.dt.toISOString().slice(0,10),botDate:all[dd.botIdx]?.dt.toISOString().slice(0,10)};
   });
+
   const dayMap={};
   all.forEach(t=>{
     if(!dayMap[t.day])dayMap[t.day]={pnl:0,tickers:{}};
@@ -131,15 +123,30 @@ function analyze(tGroups){
   });
   const days=Object.entries(dayMap).map(([d,v])=>({day:d,pnl:v.pnl,tickers:v.tickers}));
   days.sort((a,b)=>a.pnl-b.pnl);
+
   const tickerMap={};
   all.forEach(t=>{
     if(!tickerMap[t.ticker])tickerMap[t.ticker]={pnl:0,count:0,wins:0};
     tickerMap[t.ticker].pnl+=t.pnl;tickerMap[t.ticker].count++;
     if(t.pnl>0)tickerMap[t.ticker].wins++;
   });
+
+  const q=arr=>{const s=[...arr].sort((a,b)=>a-b),n=s.length;
+    const at=i=>s[Math.round(i)]??s[s.length-1];
+    return{q1:at((n-1)*.25),med:at((n-1)*.5),q3:at((n-1)*.75)};};
+  const dayPnls=days.map(d=>d.pnl);
+  const worstQ=q(dayPnls.slice(0,Math.ceil(dayPnls.length/2)));
+  const bestQ=q(dayPnls.slice(Math.floor(dayPnls.length/2)));
+
+  const losingDays=days.filter(d=>d.pnl<0);
+  const winningDays=days.filter(d=>d.pnl>0);
+  const medOf=arr=>{if(!arr.length)return 0;const s=[...arr].sort((a,b)=>a.pnl-b.pnl);return s[Math.floor((s.length-1)/2)].pnl;};
+
   return{all,equity,totalPnl:cum,count:all.length,
     winRate:(wins.length/all.length*100).toFixed(1),avgWin,avgLoss,
-    top10dd,worst10:days.slice(0,10),best10:days.slice(-10).reverse(),tickerMap};
+    top10dd,worst10:days.slice(0,10),best10:days.slice(-10).reverse(),tickerMap,worstQ,bestQ,
+    losingDaysCount:losingDays.length,winningDaysCount:winningDays.length,
+    medLosingDay:medOf(losingDays),medWinningDay:medOf(winningDays)};
 }
 
 function buildPeriods(startDt){
@@ -209,7 +216,11 @@ function renderBlock(tg,cid){
     <div class="mc"><div class="lbl">Трейдів</div><div class="val">${data.count}</div></div>
     <div class="mc"><div class="lbl">Win rate</div><div class="val">${data.winRate}%</div></div>
     <div class="mc"><div class="lbl">Avg win</div><div class="val pos">+${data.avgWin.toFixed(2)}</div></div>
-    <div class="mc"><div class="lbl">Avg loss</div><div class="val neg">${data.avgLoss.toFixed(2)}</div></div>`;
+    <div class="mc"><div class="lbl">Avg loss</div><div class="val neg">${data.avgLoss.toFixed(2)}</div></div>
+    <div class="mc"><div class="lbl">Прибуткових днів</div><div class="val pos">${data.winningDaysCount}</div></div>
+    <div class="mc"><div class="lbl">Збиткових днів</div><div class="val neg">${data.losingDaysCount}</div></div>
+    <div class="mc"><div class="lbl">Медіана прибутк. дня</div><div class="val pos">+${data.medWinningDay.toFixed(2)}</div></div>
+    <div class="mc"><div class="lbl">Медіана збитк. дня</div><div class="val neg">${data.medLosingDay.toFixed(2)}</div></div>`;
 
   if(charts[cid])charts[cid].destroy();
   const clr=data.totalPnl>=0?'#1a9e70':'#c94040';
@@ -247,6 +258,7 @@ function renderBlock(tg,cid){
   });
 }
 
+// ── HTML builders ──
 function stepDots(){
   const names=S.mode==='single'?['Завантаження','Результати']:['Завантаження','Групи','Акаунти','Результати'];
   const cur=S.mode==='single'?(S.step===1?1:2):Math.min(S.step,4);
@@ -288,7 +300,7 @@ function step2(){
     return`<div class="card">
       <div class="row" style="margin-bottom:4px">
         <span class="dot" style="background:${GCOLS[g.ci%GCOLS.length]}"></span>
-        <input type="text" class="gnm" data-gid="${g.id}" value="${g.name}" style="flex:1;border:none;background:transparent;font-size:13px;font-weight:500;outline:none">
+        <input type="text" class="gnm" data-gid="${g.id}" value="${g.name}" style="flex:1;border:none;background:transparent;font-size:13px;font-weight:500;outline:none;color:inherit">
         ${S.groups.length>1?`<span class="rm" data-rmg="${g.id}" style="font-size:11px">видалити</span>`:''}
       </div>
       <p style="font-size:12px;color:#888">${strs.length?strs.map(s=>bdg(s.ticker)).join(''):'— порожня —'} (${strs.length})</p>
@@ -379,11 +391,13 @@ function advance(){
 function bind(){
   const fi=document.getElementById('fi');
   if(fi)fi.addEventListener('change',e=>{[...e.target.files].forEach(f=>S.rawFiles[f.name]=f);render();});
+
   const dz=document.getElementById('dz');
   if(dz){
     dz.addEventListener('dragover',e=>e.preventDefault());
     dz.addEventListener('drop',e=>{e.preventDefault();[...e.dataTransfer.files].forEach(f=>S.rawFiles[f.name]=f);render();});
   }
+
   document.querySelectorAll('[data-rm]').forEach(el=>el.addEventListener('click',e=>{
     e.stopPropagation();
     const k=el.dataset.rm;
@@ -392,36 +406,45 @@ function bind(){
     S.groups.forEach(g=>g.sids=g.sids.filter(id=>S.strategies.find(s=>s.id===id)));
     render();
   }));
+
   document.querySelectorAll('[data-mode]').forEach(el=>el.addEventListener('click',()=>{S.mode=el.dataset.mode;render();}));
   document.querySelectorAll('[data-period]').forEach(el=>el.addEventListener('click',()=>{S.rotPeriod=el.dataset.period;render();}));
+
   document.querySelectorAll('.gsel').forEach(el=>el.addEventListener('change',()=>{
     const sid=el.dataset.sid;
     S.groups.forEach(g=>g.sids=g.sids.filter(x=>x!==sid));
     if(el.value)S.groups.find(g=>g.id===el.value)?.sids.push(sid);
     render();
   }));
+
   document.querySelectorAll('.gnm').forEach(el=>el.addEventListener('input',()=>{
     const g=S.groups.find(x=>x.id===el.dataset.gid);if(g)g.name=el.value;
   }));
+
   document.querySelectorAll('[data-rmg]').forEach(el=>el.addEventListener('click',()=>{
     S.groups=S.groups.filter(g=>g.id!==el.dataset.rmg);render();
   }));
+
   const bag=document.getElementById('btn-ag');
   if(bag)bag.addEventListener('click',()=>{
     S.groups.push({id:uid(),name:`Група ${S.groups.length+1}`,ci:S.groups.length%GCOLS.length,sids:[]});render();
   });
+
   const rt=document.getElementById('rot-tog');
   if(rt)rt.addEventListener('click',()=>{S.rotEnabled=!S.rotEnabled;render();});
+
   const ra=document.getElementById('rot-a');
   if(ra)ra.addEventListener('change',()=>{
     S.rotGrpA=ra.value;
     S.rotGrpB=S.groups.find(g=>g.id!==ra.value)?.id||S.groups[0]?.id;
   });
+
   document.querySelectorAll('input[data-acc]').forEach(el=>el.addEventListener('change',()=>{
     const {acc,gid}=el.dataset;
     if(el.checked){if(!S.accGrps[acc].includes(gid))S.accGrps[acc].push(gid);}
     else S.accGrps[acc]=S.accGrps[acc].filter(x=>x!==gid);
   }));
+
   document.querySelectorAll('.tab').forEach(tab=>tab.addEventListener('click',()=>{
     document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));
     tab.classList.add('on');
@@ -429,10 +452,12 @@ function bind(){
     const p=document.getElementById('p'+tab.dataset.tab);
     if(p)p.style.display='';
   }));
+
   const bb=document.getElementById('btn-back');
   if(bb)bb.addEventListener('click',()=>{
     S.step=S.mode==='single'?1:Math.max(1,S.step-1);render();
   });
+
   const bn=document.getElementById('btn-next');
   if(bn)bn.addEventListener('click',()=>{
     if(S.step===1){
@@ -450,5 +475,3 @@ function bind(){
 
 render();
 </script>
-</body>
-</html>
