@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,sans-serif;font-size:14px;color:#1a1a1a;background:transparent;padding:1rem 0}
+h2{font-size:18px;font-weight:500;margin-bottom:1rem}
+h3{font-size:15px;font-weight:500;margin-bottom:.5rem;color:#555}
+.steps{display:flex;gap:6px;margin-bottom:1.5rem;align-items:center}
+.step-dot{height:4px;flex:1;border-radius:2px;background:#ccc}
+.step-dot.active{background:#1a1a1a}
+.step-dot.done{background:#1a9e70}
+.step-lbl{font-size:11px;color:#888;white-space:nowrap;margin-left:4px}
+.upload-zone{border:1.5px dashed #aaa;border-radius:12px;padding:1.5rem;text-align:center;cursor:pointer;margin-bottom:1rem}
+.upload-zone:hover{background:rgba(0,0,0,.03)}
+.upload-zone input{display:none}
+.file-list{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:1rem}
+.chip{background:rgba(0,0,0,.04);border:0.5px solid #ddd;border-radius:8px;padding:3px 8px;font-size:12px;display:flex;align-items:center;gap:5px}
+.rm{cursor:pointer;color:#c33;font-size:13px;line-height:1;flex-shrink:0}
+.btn{padding:.45rem .9rem;border:0.5px solid #bbb;border-radius:8px;background:transparent;font-size:13px;cursor:pointer;font-weight:500;color:#1a1a1a}
+.btn:hover{background:rgba(0,0,0,.04)}
+.btn:disabled{opacity:.4;cursor:default}
+.btn-full{width:100%;padding:.55rem}
+.btn-green{border-color:#1a9e70;color:#1a9e70}
+.seg{display:flex;gap:6px;margin-bottom:1rem}
+.seg-btn{flex:1;padding:.4rem;border:0.5px solid #bbb;border-radius:8px;cursor:pointer;text-align:center;font-size:13px;background:transparent;color:#888}
+.seg-btn.on{border-color:#1a9e70;color:#1a9e70;background:rgba(26,158,112,.06)}
+.card{border:0.5px solid #ddd;border-radius:10px;padding:.75rem 1rem;margin-bottom:.75rem}
+.dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;display:inline-block}
+.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin:1rem 0}
+.mc{background:rgba(0,0,0,.04);border-radius:8px;padding:.6rem .9rem}
+.mc .lbl{font-size:10px;color:#888;text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px}
+.mc .val{font-size:19px;font-weight:500}
+.pos{color:#1a9e70}.neg{color:#c94040}
+.tabs{display:flex;margin-bottom:1rem;border-bottom:0.5px solid #ddd}
+.tab{padding:.45rem 1rem;cursor:pointer;font-size:13px;color:#888;border-bottom:2px solid transparent;margin-bottom:-1px}
+.tab.on{color:#1a1a1a;border-bottom-color:#1a1a1a;font-weight:500}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{text-align:left;padding:5px 6px;border-bottom:1px solid #ddd;color:#888;font-weight:500}
+td{padding:5px 6px;border-bottom:0.5px solid #f0f0ee}
+.section{margin-bottom:1.5rem}
+.bdg{display:inline-block;padding:1px 5px;border-radius:4px;font-size:11px;margin:1px;font-weight:500}
+.chart-wrap{position:relative;width:100%;height:200px;margin:.5rem 0}
+hr{border:none;border-top:0.5px solid #ddd;margin:.75rem 0}
+.tog{width:36px;height:20px;border-radius:10px;background:#888;position:relative;cursor:pointer;flex-shrink:0;transition:background .2s}
+.tog.on{background:#1a9e70}
+.tog::after{content:'';position:absolute;width:16px;height:16px;border-radius:50%;background:#fff;top:2px;left:2px;transition:left .2s;box-shadow:0 1px 3px rgba(0,0,0,.3)}
+.tog.on::after{left:18px}
+.row{display:flex;align-items:center;gap:8px}
+select{font-size:12px;padding:2px 4px;border:0.5px solid #ccc;border-radius:4px;background:#fff;color:#1a1a1a}
+input[type=text]{font-size:13px;padding:3px 6px;border:0.5px solid #ccc;border-radius:6px;background:#fff;color:#1a1a1a}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+var GCOLS=['#3a7bd5','#1a9e70','#e07b39','#9c59d1','#c94040','#e0a020','#888'];
+var TCOLS={
+  ES:{bg:'#d4e9f7',fg:'#0a4c7a'},GC:{bg:'#faecd0',fg:'#7a4e00'},
+  BTC:{bg:'#e6d8f5',fg:'#4a1a80'},CL:{bg:'#d8f0d8',fg:'#1a5c1a'},
+  NQ:{bg:'#fde8d8',fg:'#7a2e00'},MNQ:{bg:'#fde8d8',fg:'#7a2e00'}
+};
+var charts={};
+
+var S={
+  step:1,mode:'single',rawFiles:{},strategies:[],
+  groups:[{id:'g0',name:'Група 1',ci:0,sids:[]},{id:'g1',name:'Група 2',ci:1,sids:[]}],
+  rotEnabled:false,rotPeriod:'daily',rotGrpA:'g0',rotGrpB:'g1',
+  accGrps:{A:['g0'],B:['g1']}
+};
+
+function tickerOf(n){var m=n.match(/^([A-Z]+)_/);return m?m[1]:n.replace(/\.csv$/i,'').split('_')[0];}
+function parseDate(s){if(!s)return null;var d=new Date(s.trim().replace(' ','T'));return isNaN(d)?null:d;}
+function tradingDay(dt){return dt.toISOString().slice(0,10);}
+function fmt(v){return(v>=0?'+':'')+v.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});}
+function pclr(v){return v>=0?'#1a9e70':'#c94040';}
+function bdg(tk,lbl){
+  var c=TCOLS[tk]||{bg:'#ebebeb',fg:'#555'};
+  return '<span class="bdg" style="background:'+c.bg+';color:'+c.fg+'">'+(lbl!==undefined?lbl:tk)+'</span>';
+}
+function uid(){return 'g'+Date.now()+Math.random().toString(36).slice(2,6);}
+function fmtAbs(v){return v.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});}
+
+function parseFile(filename,file,cb){
+  Papa.parse(file,{header:true,skipEmptyLines:true,dynamicTyping:true,complete:function(res){
+    var ticker=tickerOf(filename),trades=[];
+    res.data.forEach(function(r){
+      var type=(r['Type']||r['type']||'').toString().trim().toLowerCase();
+      if(type.indexOf('exit')<0)return;
+      var dt=parseDate(r['Date and time']||r['date and time']||r['Date']);
+      var pnl=parseFloat(r['Net P&L USD']||r['Net P&L']||0);
+      var ae=parseFloat(r['Adverse excursion USD']||r['Adverse excursion']||0);
+      ae=Math.min(0,ae);
+      if(dt&&!isNaN(pnl))trades.push({dt:dt,pnl:pnl,day:tradingDay(dt),ae:ae});
+    });
+    trades.sort(function(a,b){return a.dt-b.dt;});
+    cb({id:uid(),filename:filename,ticker:ticker,trades:trades});
+  }});
+}
+
+function analyze(tGroups){
+  var all=[];
+  tGroups.forEach(function(g){
+    g.trades.forEach(function(t){all.push({dt:t.dt,pnl:t.pnl,day:t.day,ae:t.ae,ticker:g.ticker});});
+  });
+  all.sort(function(a,b){return a.dt-b.dt;});
+  if(!all.length)return null;
+
+  var cum=0;
+  var equity=all.map(function(t){cum+=t.pnl;return parseFloat(cum.toFixed(2));});
+
+  var dayMap={};
+  all.forEach(function(t){
+    if(!dayMap[t.day])dayMap[t.day]={pnl:0,ae:0,tickers:{},aeTickers:{}};
+    dayMap[t.day].pnl+=t.pnl;
+    dayMap[t.day].ae+=t.ae;
+    dayMap[t.day].tickers[t.ticker]=(dayMap[t.day].tickers[t.ticker]||0)+t.pnl;
+    dayMap[t.day].aeTickers[t.ticker]=(dayMap[t.day].aeTickers[t.ticker]||0)+t.ae;
+  });
+  var dayOrder=Object.keys(dayMap).sort();
+
+  // Extended equity: for each day insert [intraday_worst, end_of_day]
+  var extEq=[],extMeta=[];
+  var runCum=0;
+  dayOrder.forEach(function(day){
+    var d=dayMap[day];
+    extEq.push(parseFloat((runCum+d.ae).toFixed(2)));
+    extMeta.push({day:day,type:'intraday'});
+    runCum+=d.pnl;
+    extEq.push(parseFloat(runCum.toFixed(2)));
+    extMeta.push({day:day,type:'close'});
+  });
+
+  // Drawdowns on extended equity
+  var pk=0,pkIdx=0,ddList=[];
+  for(var i=0;i<extEq.length;i++){
+    if(extEq[i]>=pk){pk=extEq[i];pkIdx=i;}
+    var draw=pk-extEq[i];
+    if(draw>0){
+      var last=ddList[ddList.length-1];
+      if(last&&last.pkIdx===pkIdx){if(draw>last.depth){last.depth=draw;last.botIdx=i;}}
+      else ddList.push({pkIdx:pkIdx,botIdx:i,depth:draw});
+    }
+  }
+  ddList.sort(function(a,b){return b.depth-a.depth;});
+  var top10dd=ddList.slice(0,10).map(function(dd){
+    var startDay=extMeta[dd.pkIdx].day;
+    var botDay=extMeta[dd.botIdx].day;
+    var si=dayOrder.indexOf(startDay),bi=dayOrder.indexOf(botDay);
+    if(si<0)si=0;if(bi<0)bi=dayOrder.length-1;
+    var tmap={};
+    for(var di=si;di<=bi;di++){
+      var dm=dayMap[dayOrder[di]];
+      Object.keys(dm.tickers).forEach(function(tk){tmap[tk]=(tmap[tk]||0)+dm.tickers[tk];});
+    }
+    return{depth:dd.depth,startDate:startDay,botDate:botDay,tmap:tmap};
+  });
+
+  var days=dayOrder.map(function(d){return{day:d,pnl:dayMap[d].pnl,ae:dayMap[d].ae,tickers:dayMap[d].tickers,aeTickers:dayMap[d].aeTickers};});
+  days.sort(function(a,b){return a.pnl-b.pnl;});
+
+  var losingDays=days.filter(function(d){return d.pnl<0;});
+  var winningDays=days.filter(function(d){return d.pnl>0;});
+  function avgOf(arr){if(!arr.length)return 0;return arr.reduce(function(s,d){return s+d.pnl;},0)/arr.length;}
+
+  var top10intraday=days.slice().sort(function(a,b){return a.ae-b.ae;}).filter(function(d){return d.ae<0;}).slice(0,10);
+
+  var tickerMap={};
+  all.forEach(function(t){
+    if(!tickerMap[t.ticker])tickerMap[t.ticker]={pnl:0,count:0,wins:0};
+    tickerMap[t.ticker].pnl+=t.pnl;tickerMap[t.ticker].count++;
+    if(t.pnl>0)tickerMap[t.ticker].wins++;
+  });
+
+  var dc=0;
+  var dayLabels=dayOrder;
+  var dayEquity=dayOrder.map(function(d){dc+=dayMap[d].pnl;return parseFloat(dc.toFixed(2));});
+
+  var wins=all.filter(function(t){return t.pnl>0;});
+  var losses=all.filter(function(t){return t.pnl<0;});
+
+  return{
+    all:all,equity:equity,dayLabels:dayLabels,dayEquity:dayEquity,
+    totalPnl:cum,count:all.length,
+    winRate:(wins.length/all.length*100).toFixed(1),
+    avgWin:wins.length?wins.reduce(function(s,t){return s+t.pnl;},0)/wins.length:0,
+    avgLoss:losses.length?losses.reduce(function(s,t){return s+t.pnl;},0)/losses.length:0,
+    top10dd:top10dd,worst10:days.slice(0,10),best10:days.slice(-10).reverse(),
+    top10intraday:top10intraday,tickerMap:tickerMap,
+    losingDaysCount:losingDays.length,winningDaysCount:winningDays.length,
+    avgWinningDay:avgOf(winningDays),avgLosingDay:avgOf(losingDays)
+  };
+}
+
+function buildPeriods(startDt){
+  var periods=[],end=new Date();end.setMonth(end.getMonth()+2);
+  var d=new Date(startDt);
+  if(S.rotPeriod==='daily')d.setUTCHours(0,0,0,0);
+  else if(S.rotPeriod==='weekly'){d.setUTCHours(0,0,0,0);d.setUTCDate(d.getUTCDate()-d.getUTCDay());}
+  else{d.setUTCHours(0,0,0,0);d.setUTCDate(1);}
+  while(d<end){
+    var s=new Date(d);
+    if(S.rotPeriod==='daily')d.setUTCDate(d.getUTCDate()+1);
+    else if(S.rotPeriod==='weekly')d.setUTCDate(d.getUTCDate()+7);
+    else{d.setUTCMonth(d.getUTCMonth()+1);d.setUTCDate(1);}
+    periods.push({s:s,e:new Date(d)});
+  }
+  return periods;
+}
+function periodIdx(dt,periods){for(var i=0;i<periods.length;i++)if(dt>=periods[i].s&&dt<periods[i].e)return i;return 0;}
+
+function getAccountTrades(accId){
+  if(S.mode==='single')return S.strategies.map(function(s){return{ticker:s.ticker,trades:s.trades};});
+  if(!S.rotEnabled){
+    var res=[];
+    (S.accGrps[accId]||[]).forEach(function(gid){
+      var g=S.groups.find(function(x){return x.id===gid;});if(!g)return;
+      g.sids.forEach(function(sid){
+        var st=S.strategies.find(function(x){return x.id===sid;});
+        if(st)res.push({ticker:st.ticker,trades:st.trades});
+      });
+    });
+    return res;
+  }
+  var grpA=S.groups.find(function(g){return g.id===S.rotGrpA;});
+  var grpB=S.groups.find(function(g){return g.id===S.rotGrpB;});
+  if(!grpA||!grpB)return[];
+  function grpTrades(grp,src){
+    var arr=[];
+    grp.sids.forEach(function(sid){
+      var st=S.strategies.find(function(x){return x.id===sid;});
+      if(st)st.trades.forEach(function(t){arr.push({dt:t.dt,pnl:t.pnl,day:t.day,ae:t.ae,ticker:st.ticker,src:src});});
+    });
+    return arr;
+  }
+  var allT=grpTrades(grpA,'A').concat(grpTrades(grpB,'B')).sort(function(a,b){return a.dt-b.dt;});
+  if(!allT.length)return[];
+  var periods=buildPeriods(allT[0].dt);
+  var filtered=allT.filter(function(t){
+    var pi=periodIdx(t.dt,periods),even=pi%2===0;
+    return accId==='A'?(even?t.src==='A':t.src==='B'):(even?t.src==='B':t.src==='A');
+  });
+  var grouped={};
+  filtered.forEach(function(t){
+    if(!grouped[t.ticker])grouped[t.ticker]=[];
+    grouped[t.ticker].push({dt:t.dt,pnl:t.pnl,day:t.day,ae:t.ae});
+  });
+  return Object.keys(grouped).map(function(tk){return{ticker:tk,trades:grouped[tk]};});
+}
+
+function renderBlock(tg,cid){
+  var data=analyze(tg);
+  var c=document.getElementById(cid);
+  if(!c)return;
+  if(!data||!data.count){c.innerHTML='<p style="color:#888;padding:.5rem 0;font-size:13px">Немає трейдів.</p>';return;}
+
+  var html='';
+  html+='<div class="metrics" id="'+cid+'_m"></div>';
+  html+='<div class="section"><div class="row" style="margin-bottom:.5rem">';
+  html+='<h3 style="margin:0;flex:1">Equity curve</h3>';
+  html+='<div class="seg" style="margin:0;width:220px">';
+  html+='<div class="seg-btn on" id="'+cid+'_vt">По трейдах</div>';
+  html+='<div class="seg-btn" id="'+cid+'_vd">По днях</div>';
+  html+='</div></div><div class="chart-wrap"><canvas id="'+cid+'_cv"></canvas></div></div>';
+  html+='<div class="section"><h3>Топ-10 просадок (з урахуванням просадки в моменті)</h3>';
+  html+='<table><thead><tr><th>#</th><th>Пік</th><th>Дно</th><th>Просадка $</th><th>Розшифровка</th></tr></thead>';
+  html+='<tbody id="'+cid+'_dd"></tbody></table></div>';
+  html+='<div class="section"><h3>Топ-10 днів за просадкою в моменті</h3>';
+  html+='<table><thead><tr><th>День</th><th>Реалізований PnL</th><th>Просадка в моменті $</th><th>Розшифровка (просадка)</th></tr></thead>';
+  html+='<tbody id="'+cid+'_id"></tbody></table></div>';
+  html+='<div class="section"><h3>Топ-10 найгірших днів</h3>';
+  html+='<table><thead><tr><th>День</th><th>PnL</th><th>Розшифровка</th></tr></thead>';
+  html+='<tbody id="'+cid+'_bd"></tbody></table></div>';
+  html+='<div class="section"><h3>Топ-10 найкращих днів</h3>';
+  html+='<table><thead><tr><th>День</th><th>PnL</th><th>Розшифровка</th></tr></thead>';
+  html+='<tbody id="'+cid+'_gd"></tbody></table></div>';
+  html+='<div class="section"><h3>По тікерах</h3>';
+  html+='<table><thead><tr><th>Тікер</th><th>Трейдів</th><th>PnL</th><th>Win%</th></tr></thead>';
+  html+='<tbody id="'+cid+'_tk"></tbody></table></div>';
+  c.innerHTML=html;
+
+  document.getElementById(cid+'_m').innerHTML=
+    '<div class="mc"><div class="lbl">PnL</div><div class="val '+(data.totalPnl>=0?'pos':'neg')+'">'+fmt(data.totalPnl)+'</div></div>'+
+    '<div class="mc"><div class="lbl">Трейдів</div><div class="val">'+data.count+'</div></div>'+
+    '<div class="mc"><div class="lbl">Win rate</div><div class="val">'+data.winRate+'%</div></div>'+
+    '<div class="mc"><div class="lbl">Avg win</div><div class="val pos">+'+data.avgWin.toFixed(2)+'</div></div>'+
+    '<div class="mc"><div class="lbl">Avg loss</div><div class="val neg">'+data.avgLoss.toFixed(2)+'</div></div>'+
+    '<div class="mc"><div class="lbl">Прибутк. днів</div><div class="val pos">'+data.winningDaysCount+'</div></div>'+
+    '<div class="mc"><div class="lbl">Збитк. днів</div><div class="val neg">'+data.losingDaysCount+'</div></div>'+
+    '<div class="mc"><div class="lbl">Сер. прибутк. день</div><div class="val pos">+'+data.avgWinningDay.toFixed(2)+'</div></div>'+
+    '<div class="mc"><div class="lbl">Сер. збитк. день</div><div class="val neg">'+data.avgLosingDay.toFixed(2)+'</div></div>';
+
+  function buildChart(view){
+    if(charts[cid])charts[cid].destroy();
+    var labels=view==='trades'?data.all.map(function(t){return t.dt.toISOString().slice(0,10);}):data.dayLabels;
+    var vals=view==='trades'?data.equity:data.dayEquity;
+    var total=vals.length?vals[vals.length-1]:0;
+    var clr=total>=0?'#1a9e70':'#c94040';
+    charts[cid]=new Chart(document.getElementById(cid+'_cv'),{
+      type:'line',
+      data:{labels:labels,datasets:[{data:vals,borderColor:clr,borderWidth:1.5,
+        pointRadius:view==='days'?2:0,
+        fill:{target:'origin',above:'rgba(26,158,112,.07)',below:'rgba(201,64,64,.07)'}}]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+        scales:{
+          x:{ticks:{maxTicksLimit:6,autoSkip:true,maxRotation:0},grid:{display:false}},
+          y:{ticks:{callback:function(v){return '$'+v.toLocaleString();}},grid:{color:'rgba(128,128,128,.1)'}}
+        }}
+    });
+  }
+  buildChart('trades');
+  document.getElementById(cid+'_vt').addEventListener('click',function(){
+    document.getElementById(cid+'_vt').classList.add('on');
+    document.getElementById(cid+'_vd').classList.remove('on');
+    buildChart('trades');
+  });
+  document.getElementById(cid+'_vd').addEventListener('click',function(){
+    document.getElementById(cid+'_vd').classList.add('on');
+    document.getElementById(cid+'_vt').classList.remove('on');
+    buildChart('days');
+  });
+
+  var ddb=document.getElementById(cid+'_dd');
+  data.top10dd.forEach(function(dd,i){
+    var b=Object.keys(dd.tmap).map(function(t){return bdg(t,t+': '+fmt(dd.tmap[t]));}).join('');
+    ddb.innerHTML+='<tr><td>'+(i+1)+'</td><td>'+(dd.startDate||'-')+'</td><td>'+(dd.botDate||'-')+'</td>'+
+      '<td style="color:#c94040;font-weight:500">-'+fmtAbs(dd.depth)+'</td>'+
+      '<td>'+(b||'-')+'</td></tr>';
+  });
+
+  var idb=document.getElementById(cid+'_id');
+  data.top10intraday.forEach(function(d){
+    var b=Object.keys(d.aeTickers).map(function(t){return bdg(t,t+': '+fmt(d.aeTickers[t]));}).join('');
+    idb.innerHTML+='<tr>'+
+      '<td>'+d.day+'</td>'+
+      '<td style="color:'+pclr(d.pnl)+';font-weight:500">'+fmt(d.pnl)+'</td>'+
+      '<td style="color:#c94040;font-weight:500">'+fmt(d.ae)+'</td>'+
+      '<td>'+(b||'-')+'</td></tr>';
+  });
+
+  function fillDay(id,arr){
+    var tb=document.getElementById(id);
+    arr.forEach(function(d){
+      var b=Object.keys(d.tickers).map(function(t){return bdg(t,t+': '+fmt(d.tickers[t]));}).join('');
+      tb.innerHTML+='<tr><td>'+d.day+'</td><td style="color:'+pclr(d.pnl)+';font-weight:500">'+fmt(d.pnl)+'</td><td>'+b+'</td></tr>';
+    });
+  }
+  fillDay(cid+'_bd',data.worst10);
+  fillDay(cid+'_gd',data.best10);
+
+  var tkb=document.getElementById(cid+'_tk');
+  Object.keys(data.tickerMap).sort(function(a,b){return data.tickerMap[b].pnl-data.tickerMap[a].pnl;}).forEach(function(t){
+    var v=data.tickerMap[t];
+    tkb.innerHTML+='<tr><td>'+bdg(t)+'</td><td>'+v.count+'</td>'+
+      '<td style="color:'+pclr(v.pnl)+';font-weight:500">'+fmt(v.pnl)+'</td>'+
+      '<td>'+(v.wins/v.count*100).toFixed(1)+'%</td></tr>';
+  });
+}
+
+function stepDots(){
+  var names=S.mode==='single'?['Завантаження','Результати']:['Завантаження','Групи','Акаунти','Результати'];
+  var cur=S.mode==='single'?(S.step===1?1:2):Math.min(S.step,4);
+  var dots=names.map(function(_,i){var n=i+1,cls=n<cur?'done':n===cur?'active':'';return '<div class="step-dot '+cls+'"></div>';}).join('');
+  return dots+'<span class="step-lbl">'+names[cur-1]+'</span>';
+}
+
+function step1(){
+  var chips=Object.keys(S.rawFiles).map(function(k){
+    return '<div class="chip">'+bdg(tickerOf(k))+' <span style="font-size:11px">'+k+'</span><span class="rm" data-rm="'+k+'">&#x2715;</span></div>';
+  }).join('');
+  var has=Object.keys(S.rawFiles).length>0;
+  return '<h2>Завантаження стратегій</h2>'+
+    '<div class="upload-zone" id="dz" onclick="document.getElementById(\'fi\').click()">'+
+    '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">'+
+    '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>'+
+    '<p style="color:#888;font-size:12px;margin-top:.3rem">CSV з TradingView &#8212; клацни або перетягни</p>'+
+    '<input type="file" id="fi" multiple accept=".csv"></div>'+
+    '<div class="file-list">'+chips+'</div>'+
+    '<p style="font-size:12px;color:#888;margin-bottom:.5rem">Режим:</p>'+
+    '<div class="seg">'+
+    '<div class="seg-btn '+(S.mode==='single'?'on':'')+'" data-mode="single">Один рахунок</div>'+
+    '<div class="seg-btn '+(S.mode==='multi'?'on':'')+'" data-mode="multi">Два рахунки / групи</div>'+
+    '</div>'+
+    '<button class="btn btn-full btn-green" id="btn-next" '+(has?'':'disabled')+'>'+
+    (S.mode==='single'?'Розрахувати &#8594;':'Далі: групи &#8594;')+'</button>';
+}
+
+function step2(){
+  var rows=S.strategies.map(function(s){
+    var ag=S.groups.find(function(g){return g.sids.indexOf(s.id)>=0;});
+    var opts=S.groups.map(function(g){return '<option value="'+g.id+'" '+(ag&&ag.id===g.id?'selected':'')+'>'+g.name+'</option>';}).join('');
+    opts+='<option value="" '+(!ag?'selected':'')+'>&#8212; без групи &#8212;</option>';
+    return '<div class="row" style="padding:4px 0">'+bdg(s.ticker)+
+      '<span style="flex:1;font-size:11px;color:#888">'+s.filename+'</span>'+
+      '<select data-sid="'+s.id+'" class="gsel">'+opts+'</select></div>';
+  }).join('');
+  var cards=S.groups.map(function(g){
+    var strs=S.strategies.filter(function(s){return g.sids.indexOf(s.id)>=0;});
+    var col=GCOLS[g.ci%GCOLS.length];
+    return '<div class="card"><div class="row" style="margin-bottom:4px">'+
+      '<span class="dot" style="background:'+col+'"></span>'+
+      '<input type="text" class="gnm" data-gid="'+g.id+'" value="'+g.name+'" style="flex:1;border:none;background:transparent;font-size:13px;font-weight:500;outline:none">'+
+      (S.groups.length>1?'<span class="rm" data-rmg="'+g.id+'" style="font-size:11px;cursor:pointer;color:#c33">видалити</span>':'')+
+      '</div><p style="font-size:12px;color:#888">'+(strs.length?strs.map(function(s){return bdg(s.ticker);}).join(''):'&#8212; порожня &#8212;')+' ('+strs.length+')</p></div>';
+  }).join('');
+  return '<h2>Розподіл по групах</h2><div style="margin-bottom:1rem">'+rows+'</div><hr>'+
+    '<div class="row" style="margin-bottom:.5rem"><h3 style="margin:0;flex:1">Групи</h3>'+
+    '<button class="btn" id="btn-ag" style="font-size:11px;padding:2px 8px">+ Додати групу</button></div>'+
+    cards+
+    '<div class="row" style="margin-top:1rem">'+
+    '<button class="btn" id="btn-back">&#8592; Назад</button>'+
+    '<button class="btn btn-full btn-green" id="btn-next">Далі: акаунти &#8594;</button></div>';
+}
+
+function step3(){
+  var grpOpts=function(sel){return S.groups.map(function(g){return '<option value="'+g.id+'" '+(g.id===sel?'selected':'')+'>'+g.name+'</option>';}).join('');};
+  var body;
+  if(S.rotEnabled){
+    body='<div style="margin-top:.75rem">'+
+      '<p style="font-size:12px;color:#888;margin-bottom:.4rem">Рахунок A починає з:</p>'+
+      '<select id="rot-a">'+grpOpts(S.rotGrpA)+'</select>'+
+      '<p style="font-size:11px;color:#aaa;margin-top:4px">Рахунок B &#8212; протилежна група. Далі чергуються.</p>'+
+      '<p style="font-size:12px;color:#888;margin:.75rem 0 .3rem">Період ротації:</p>'+
+      '<div class="seg" style="max-width:360px">'+
+      '<div class="seg-btn '+(S.rotPeriod==='daily'?'on':'')+'" data-period="daily">Денна</div>'+
+      '<div class="seg-btn '+(S.rotPeriod==='weekly'?'on':'')+'" data-period="weekly">Тижнева</div>'+
+      '<div class="seg-btn '+(S.rotPeriod==='monthly'?'on':'')+'" data-period="monthly">Місячна</div>'+
+      '</div></div>';
+  } else {
+    body=['A','B'].map(function(acc){
+      var chks=S.groups.map(function(g){
+        return '<div class="row" style="padding:3px 0;font-size:13px">'+
+          '<input type="checkbox" data-acc="'+acc+'" data-gid="'+g.id+'" '+((S.accGrps[acc]||[]).indexOf(g.id)>=0?'checked':'')+'>'+
+          '<span class="dot" style="background:'+GCOLS[g.ci%GCOLS.length]+'"></span> '+g.name+'</div>';
+      }).join('');
+      return '<div class="card"><p style="font-weight:500;margin-bottom:.4rem;font-size:13px">Рахунок '+acc+'</p>'+chks+'</div>';
+    }).join('');
+  }
+  return '<h2>Налаштування рахунків</h2>'+
+    '<div class="row" style="margin-bottom:.75rem">'+
+    '<div class="tog '+(S.rotEnabled?'on':'')+'" id="rot-tog"></div>'+
+    '<span style="font-size:13px">Ротація груп між рахунками</span></div>'+
+    body+
+    '<div class="row" style="margin-top:1rem">'+
+    '<button class="btn" id="btn-back">&#8592; Назад</button>'+
+    '<button class="btn btn-full btn-green" id="btn-next">Розрахувати &#8594;</button></div>';
+}
+
+function step4(){
+  var multi=S.mode==='multi';
+  return '<h2>'+(multi?'Результати по рахунках':'Результати')+'</h2>'+
+    (multi?'<div class="tabs">'+
+      '<div class="tab on" data-tab="A">Рахунок A</div>'+
+      '<div class="tab" data-tab="B">Рахунок B</div>'+
+      '<div class="tab" data-tab="all">Всі разом</div></div>':'')+
+    '<div id="pA"></div>'+
+    (multi?'<div id="pB" style="display:none"></div><div id="pall" style="display:none"></div>':'')+
+    '<button class="btn btn-full" id="btn-back" style="margin-top:1rem">&#8592; Назад</button>';
+}
+
+function render(){
+  var html;
+  if(S.step===1)html=step1();
+  else if(S.step===2&&S.mode==='multi')html=step2();
+  else if(S.step===3&&S.mode==='multi')html=step3();
+  else html=step4();
+  document.getElementById('app').innerHTML='<div class="steps">'+stepDots()+'</div>'+html;
+  bind();
+  var isResult=(S.mode==='single'&&S.step===2)||(S.mode==='multi'&&S.step===4);
+  if(isResult)setTimeout(function(){
+    if(S.mode==='single'){
+      renderBlock(S.strategies.map(function(s){return{ticker:s.ticker,trades:s.trades};}), 'pA');
+    } else {
+      renderBlock(getAccountTrades('A'),'pA');
+      renderBlock(getAccountTrades('B'),'pB');
+      renderBlock(S.strategies.map(function(s){return{ticker:s.ticker,trades:s.trades};}),'pall');
+    }
+  },50);
+}
+
+function advance(){
+  if(S.mode==='single')S.step=2;
+  else if(S.step===1)S.step=2;
+  else if(S.step===2)S.step=3;
+  else S.step=4;
+  render();
+}
+
+function bind(){
+  var fi=document.getElementById('fi');
+  if(fi)fi.addEventListener('change',function(e){Array.from(e.target.files).forEach(function(f){S.rawFiles[f.name]=f;});render();});
+  var dz=document.getElementById('dz');
+  if(dz){
+    dz.addEventListener('dragover',function(e){e.preventDefault();});
+    dz.addEventListener('drop',function(e){e.preventDefault();Array.from(e.dataTransfer.files).forEach(function(f){S.rawFiles[f.name]=f;});render();});
+  }
+  document.querySelectorAll('[data-rm]').forEach(function(el){
+    el.addEventListener('click',function(e){
+      e.stopPropagation();var k=el.dataset.rm;delete S.rawFiles[k];
+      S.strategies=S.strategies.filter(function(s){return s.filename!==k;});
+      S.groups.forEach(function(g){g.sids=g.sids.filter(function(id){return S.strategies.find(function(s){return s.id===id;});});});
+      render();
+    });
+  });
+  document.querySelectorAll('[data-mode]').forEach(function(el){el.addEventListener('click',function(){S.mode=el.dataset.mode;render();});});
+  document.querySelectorAll('[data-period]').forEach(function(el){el.addEventListener('click',function(){S.rotPeriod=el.dataset.period;render();});});
+  document.querySelectorAll('.gsel').forEach(function(el){
+    el.addEventListener('change',function(){
+      var sid=el.dataset.sid;
+      S.groups.forEach(function(g){g.sids=g.sids.filter(function(x){return x!==sid;});});
+      if(el.value){var g=S.groups.find(function(g){return g.id===el.value;});if(g)g.sids.push(sid);}
+      render();
+    });
+  });
+  document.querySelectorAll('.gnm').forEach(function(el){
+    el.addEventListener('input',function(){var g=S.groups.find(function(x){return x.id===el.dataset.gid;});if(g)g.name=el.value;});
+  });
+  document.querySelectorAll('[data-rmg]').forEach(function(el){
+    el.addEventListener('click',function(){S.groups=S.groups.filter(function(g){return g.id!==el.dataset.rmg;});render();});
+  });
+  var bag=document.getElementById('btn-ag');
+  if(bag)bag.addEventListener('click',function(){S.groups.push({id:uid(),name:'Група '+(S.groups.length+1),ci:S.groups.length%GCOLS.length,sids:[]});render();});
+  var rt=document.getElementById('rot-tog');
+  if(rt)rt.addEventListener('click',function(){S.rotEnabled=!S.rotEnabled;render();});
+  var ra=document.getElementById('rot-a');
+  if(ra)ra.addEventListener('change',function(){S.rotGrpA=ra.value;var o=S.groups.find(function(g){return g.id!==ra.value;});S.rotGrpB=o?o.id:S.groups[0].id;});
+  document.querySelectorAll('input[data-acc]').forEach(function(el){
+    el.addEventListener('change',function(){
+      var acc=el.dataset.acc,gid=el.dataset.gid;
+      if(el.checked){if(S.accGrps[acc].indexOf(gid)<0)S.accGrps[acc].push(gid);}
+      else S.accGrps[acc]=S.accGrps[acc].filter(function(x){return x!==gid;});
+    });
+  });
+  document.querySelectorAll('.tab').forEach(function(tab){
+    tab.addEventListener('click',function(){
+      document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('on');});
+      tab.classList.add('on');
+      ['pA','pB','pall'].forEach(function(id){var p=document.getElementById(id);if(p)p.style.display='none';});
+      var p=document.getElementById('p'+tab.dataset.tab);if(p)p.style.display='';
+    });
+  });
+  var bb=document.getElementById('btn-back');
+  if(bb)bb.addEventListener('click',function(){S.step=S.mode==='single'?1:Math.max(1,S.step-1);render();});
+  var bn=document.getElementById('btn-next');
+  if(bn)bn.addEventListener('click',function(){
+    if(S.step===1){
+      var newNames=Object.keys(S.rawFiles).filter(function(n){return !S.strategies.find(function(s){return s.filename===n;});});
+      if(!newNames.length){advance();return;}
+      var pend=newNames.length;
+      newNames.forEach(function(name){
+        parseFile(name,S.rawFiles[name],function(str){
+          S.strategies.push(str);
+          if(S.mode==='multi'&&!S.groups.some(function(g){return g.sids.indexOf(str.id)>=0;})){if(S.groups[0])S.groups[0].sids.push(str.id);}
+          if(--pend===0)advance();
+        });
+      });
+    } else advance();
+  });
+}
+
+render();
+</script>
+</body>
+</html>
