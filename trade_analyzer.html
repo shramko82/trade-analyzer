@@ -23,8 +23,8 @@ h3{font-size:15px;font-weight:500;margin-bottom:.5rem;color:#555}
 .btn:disabled{opacity:.4;cursor:default}
 .btn-full{width:100%;padding:.55rem}
 .btn-green{border-color:#1a9e70;color:#1a9e70}
-.seg{display:flex;gap:6px;margin-bottom:1rem}
-.seg-btn{flex:1;padding:.4rem;border:0.5px solid #bbb;border-radius:8px;cursor:pointer;text-align:center;font-size:13px;background:transparent;color:#888}
+.seg{display:flex;gap:6px;margin-bottom:.75rem}
+.seg-btn{flex:1;padding:.35rem .5rem;border:0.5px solid #bbb;border-radius:8px;cursor:pointer;text-align:center;font-size:12px;background:transparent;color:#888}
 .seg-btn.on{border-color:#1a9e70;color:#1a9e70;background:rgba(26,158,112,.06)}
 .card{border:0.5px solid #ddd;border-radius:10px;padding:.75rem 1rem;margin-bottom:.75rem}
 .dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;display:inline-block}
@@ -57,10 +57,10 @@ input[type=text]{font-size:13px;padding:3px 6px;border:0.5px solid #ccc;border-r
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script>
-var GCOLS=['#3a7bd5','#1a9e70','#e07b39','#9c59d1','#c94040','#e0a020','#888'];
-var TCOLS={ES:{bg:'#d4e9f7',fg:'#0a4c7a'},GC:{bg:'#faecd0',fg:'#7a4e00'},BTC:{bg:'#e6d8f5',fg:'#4a1a80'},CL:{bg:'#d8f0d8',fg:'#1a5c1a'},NQ:{bg:'#fde8d8',fg:'#7a2e00'},MNQ:{bg:'#fde8d8',fg:'#7a2e00'}};
-var charts={};
-var S={step:1,mode:'single',rawFiles:{},strategies:[],groups:[{id:'g0',name:'Група 1',ci:0,sids:[]},{id:'g1',name:'Група 2',ci:1,sids:[]}],rotEnabled:false,rotPeriod:'daily',rotGrpA:'g0',rotGrpB:'g1',accGrps:{A:['g0'],B:['g1']}};
+var GCOLS = ['#3a7bd5','#1a9e70','#e07b39','#9c59d1','#c94040','#e0a020','#888'];
+var TCOLS = {ES:{bg:'#d4e9f7',fg:'#0a4c7a'},GC:{bg:'#faecd0',fg:'#7a4e00'},BTC:{bg:'#e6d8f5',fg:'#4a1a80'},CL:{bg:'#d8f0d8',fg:'#1a5c1a'},NQ:{bg:'#fde8d8',fg:'#7a2e00'},MNQ:{bg:'#fde8d8',fg:'#7a2e00'}};
+var charts = {};
+var S = {step:1,mode:'single',rawFiles:{},strategies:[],groups:[{id:'g0',name:'Група 1',ci:0,sids:[]},{id:'g1',name:'Група 2',ci:1,sids:[]}],rotEnabled:false,rotPeriod:'daily',rotGrpA:'g0',rotGrpB:'g1',accGrps:{A:['g0'],B:['g1']}};
 
 function tickerOf(n){var m=n.match(/^([A-Z]+)_/);return m?m[1]:n.replace(/\.csv$/i,'').split('_')[0];}
 function parseDate(s){if(!s)return null;var d=new Date(s.trim().replace(' ','T'));return isNaN(d)?null:d;}
@@ -70,137 +70,148 @@ function pclr(v){return v>=0?'#1a9e70':'#c94040';}
 function bdg(tk,lbl){var c=TCOLS[tk]||{bg:'#ebebeb',fg:'#555'};return '<span class="bdg" style="background:'+c.bg+';color:'+c.fg+'">'+(lbl!==undefined?lbl:tk)+'</span>';}
 function uid(){return 'g'+Date.now()+Math.random().toString(36).slice(2,6);}
 function fmtAbs(v){return v.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});}
+function isoWeek(ds){var d=new Date(ds),t=new Date(d);t.setUTCDate(d.getUTCDate()-(d.getUTCDay()+6)%7+3);var y=t.getUTCFullYear(),j=new Date(Date.UTC(y,0,4)),w=1+Math.round(((t-j)/86400000-(3-((j.getUTCDay()+6)%7)))/7);return y+'-W'+(w<10?'0':'')+w;}
+function copyKeys(obj){var r={};Object.keys(obj).forEach(function(k){r[k]=true;});return r;}
 
 function parseFile(filename,file,cb){
   Papa.parse(file,{header:true,skipEmptyLines:true,dynamicTyping:true,complete:function(res){
-    var ticker=tickerOf(filename),trades=[];
+    var ticker=tickerOf(filename),byNum={};
     res.data.forEach(function(r){
+      var num=r['Trade #']||r['trade #']||r['Trade#']||r['Trade number']||r['trade number'];if(!num)return;
       var type=(r['Type']||r['type']||'').toString().trim().toLowerCase();
-      if(type.indexOf('exit')<0)return;
-      var dt=parseDate(r['Date and time']||r['date and time']||r['Date']);
-      var pnl=parseFloat(r['Net P&L USD']||r['Net P&L']||0);
-      var aeRaw=parseFloat(r['Adverse excursion USD']||r['Adverse excursion']||0);
-      // TradingView exports ae as negative number (loss). Ensure it is <=0.
-      var ae=Math.min(0, aeRaw);
-      if(dt&&!isNaN(pnl))trades.push({dt:dt,pnl:pnl,day:tradingDay(dt),ae:ae});
+      var dt=parseDate(r['Date and time']||r['date and time']||r['Date']);if(!dt)return;
+      if(!byNum[num])byNum[num]={};
+      if(type.indexOf('entry')>=0){byNum[num].entryDt=dt;}
+      else if(type.indexOf('exit')>=0){
+        byNum[num].exitDt=dt;
+        byNum[num].pnl=parseFloat(r['Net P&L USD']||r['Net P&L']||r['Net PnL USD']||r['Net PnL']||0);
+        byNum[num].ae=Math.min(0,parseFloat(r['Adverse excursion USD']||r['Adverse excursion']||0));
+      }
+    });
+    var trades=[];
+    Object.keys(byNum).forEach(function(num){
+      var t=byNum[num];if(!t.exitDt||isNaN(t.pnl))return;
+      trades.push({entryDt:t.entryDt||t.exitDt,dt:t.exitDt,pnl:t.pnl,ae:t.ae||0,day:tradingDay(t.exitDt)});
     });
     trades.sort(function(a,b){return a.dt-b.dt;});
     cb({id:uid(),filename:filename,ticker:ticker,trades:trades});
   }});
 }
 
+// Sweep-line: max simultaneous intraday drawdown.
+// At each moment: openAE (sum of AE of currently open trades) + realizedNeg (sum of P&L of already-closed losing trades).
+// Closed winning trades are ignored.
+function sweepAE(trades){
+  if(!trades.length)return{ae:0,aeTickers:{}};
+  var events=[];
+  trades.forEach(function(t,i){
+    events.push({time:t.entryDt.getTime(),isEnd:false,idx:i});
+    events.push({time:t.dt.getTime(),isEnd:true,idx:i});
+  });
+  events.sort(function(a,b){return a.time!==b.time?a.time-b.time:(a.isEnd?-1:1);});
+
+  var open={},closedNeg={},openAE=0,realizedNeg=0;
+  var minVal=0,bestOpen={},bestClosedNeg={};
+
+  for(var ei=0;ei<events.length;ei++){
+    var e=events[ei];
+    if(e.isEnd){
+      openAE-=trades[e.idx].ae;
+      delete open[e.idx];
+      if(trades[e.idx].pnl<0){closedNeg[e.idx]=true;realizedNeg+=trades[e.idx].pnl;}
+    } else {
+      open[e.idx]=true;
+      openAE+=trades[e.idx].ae;
+    }
+    var total=realizedNeg+openAE;
+    if(total<minVal){
+      minVal=total;
+      bestOpen=copyKeys(open);
+      bestClosedNeg=copyKeys(closedNeg);
+    }
+  }
+
+  var aeTickers={};
+  Object.keys(bestOpen).forEach(function(k){var t=trades[parseInt(k)];aeTickers[t.ticker]=(aeTickers[t.ticker]||0)+t.ae;});
+  Object.keys(bestClosedNeg).forEach(function(k){var t=trades[parseInt(k)];aeTickers[t.ticker]=(aeTickers[t.ticker]||0)+t.pnl;});
+  return{ae:minVal,aeTickers:aeTickers};
+}
+
 function analyze(tGroups){
   var all=[];
-  tGroups.forEach(function(g){g.trades.forEach(function(t){all.push({dt:t.dt,pnl:t.pnl,day:t.day,ae:t.ae,ticker:g.ticker});});});
+  tGroups.forEach(function(g){g.trades.forEach(function(t){all.push({entryDt:t.entryDt,dt:t.dt,pnl:t.pnl,ae:t.ae,day:t.day,ticker:g.ticker});});});
   all.sort(function(a,b){return a.dt-b.dt;});
   if(!all.length)return null;
 
-  // --- realized equity (per trade, for chart) ---
   var cum=0;
   var equity=all.map(function(t){cum+=t.pnl;return parseFloat(cum.toFixed(2));});
 
-  // --- build day-level data ---
-  var dayMap={};  // day -> {pnl, ae, tickers:{tk->pnl}, aeTickers:{tk->ae}}
+  var dayMap={};
   all.forEach(function(t){
-    if(!dayMap[t.day])dayMap[t.day]={pnl:0,ae:0,tickers:{},aeTickers:{}};
+    if(!dayMap[t.day])dayMap[t.day]={pnl:0,ae:0,tickers:{},aeTickers:{},trades:[]};
     dayMap[t.day].pnl+=t.pnl;
-    dayMap[t.day].ae+=t.ae;
     dayMap[t.day].tickers[t.ticker]=(dayMap[t.day].tickers[t.ticker]||0)+t.pnl;
-    dayMap[t.day].aeTickers[t.ticker]=(dayMap[t.day].aeTickers[t.ticker]||0)+t.ae;
+    dayMap[t.day].trades.push(t);
   });
   var dayOrder=Object.keys(dayMap).sort();
+  dayOrder.forEach(function(day){var r=sweepAE(dayMap[day].trades);dayMap[day].ae=r.ae;dayMap[day].aeTickers=r.aeTickers;});
 
-  // --- day equity (for chart by days) ---
-  var dc=0;
-  var dayEquity=dayOrder.map(function(d){dc+=dayMap[d].pnl;return parseFloat(dc.toFixed(2));});
+  var dc=0,dayEquity=dayOrder.map(function(d){dc+=dayMap[d].pnl;return parseFloat(dc.toFixed(2));});
 
-  // --- extended equity for drawdown detection ---
-  // Each day produces TWO points: [intraday_worst, end_of_day]
-  // intraday_worst = prev_cum + day.ae  (day.ae <= 0)
-  // end_of_day     = prev_cum + day.pnl
-  // Peak can only ever be at an end_of_day point (since ae<=0 means intraday<=prev_close)
-  var extEq=[];    // equity values
-  var extDay=[];   // which day each point belongs to
-  var extIsIntra=[];// true = intraday point, false = close point
-  var rc=0;
+  var weekMap={};
+  dayOrder.forEach(function(d){var w=isoWeek(d);weekMap[w]=(weekMap[w]||0)+dayMap[d].pnl;});
+  var weekOrder=Object.keys(weekMap).sort(),wc=0;
+  var weekEquity=weekOrder.map(function(w){wc+=weekMap[w];return parseFloat(wc.toFixed(2));});
+
+  var monthMap={};
+  dayOrder.forEach(function(d){var m=d.slice(0,7);monthMap[m]=(monthMap[m]||0)+dayMap[d].pnl;});
+  var monthOrder=Object.keys(monthMap).sort(),mc=0;
+  var monthEquity=monthOrder.map(function(m){mc+=monthMap[m];return parseFloat(mc.toFixed(2));});
+
+  var extEq=[],extDay=[],extIsIntra=[],rc=0;
   dayOrder.forEach(function(day){
     var d=dayMap[day];
-    extEq.push(parseFloat((rc+d.ae).toFixed(2)));  // intraday worst
-    extDay.push(day);
-    extIsIntra.push(true);
+    extEq.push(parseFloat((rc+d.ae).toFixed(2)));extDay.push(day);extIsIntra.push(true);
     rc+=d.pnl;
-    extEq.push(parseFloat(rc.toFixed(2)));           // end of day close
-    extDay.push(day);
-    extIsIntra.push(false);
+    extEq.push(parseFloat(rc.toFixed(2)));extDay.push(day);extIsIntra.push(false);
   });
 
-  // --- drawdown detection on extended equity ---
-  // Peak: only updated at close points (extIsIntra[i]===false)
-  var pk=0, pkDay='', ddList=[];
+  var pk=0,pkDay='',ddList=[];
   for(var i=0;i<extEq.length;i++){
-    if(!extIsIntra[i] && extEq[i]>=pk){
-      pk=extEq[i];
-      pkDay=extDay[i];
-    }
+    if(!extIsIntra[i]&&extEq[i]>=pk){pk=extEq[i];pkDay=extDay[i];}
     var draw=pk-extEq[i];
     if(draw>0){
       var last=ddList[ddList.length-1];
-      if(last&&last.pkDay===pkDay){
-        if(draw>last.depth){last.depth=draw;last.botDay=extDay[i];last.botIsIntra=extIsIntra[i];}
-      } else {
-        ddList.push({pkDay:pkDay,botDay:extDay[i],depth:draw,botIsIntra:extIsIntra[i]});
-      }
+      if(last&&last.pkDay===pkDay){if(draw>last.depth){last.depth=draw;last.botDay=extDay[i];}}
+      else ddList.push({pkDay:pkDay,botDay:extDay[i],depth:draw});
     }
   }
   ddList.sort(function(a,b){return b.depth-a.depth;});
 
-  // --- build breakdown for each drawdown ---
-  // Days between peak and bottom:
-  //   - days strictly after pkDay and strictly before botDay: use realized P&L (tickers)
-  //   - botDay itself: ALWAYS use adverse excursion (aeTickers)
-  //     because the trough was the intraday low of that day
   var top10dd=ddList.slice(0,10).map(function(dd){
-    var si=dayOrder.indexOf(dd.pkDay);
-    var bi=dayOrder.indexOf(dd.botDay);
-    if(si<0)si=0; if(bi<0)bi=dayOrder.length-1;
+    var si=dayOrder.indexOf(dd.pkDay),bi=dayOrder.indexOf(dd.botDay);
+    if(si<0)si=0;if(bi<0)bi=dayOrder.length-1;
     var tmap={};
-    for(var di=si+1;di<bi;di++){
-      // intermediate days: realized P&L
-      var dm=dayMap[dayOrder[di]];
-      Object.keys(dm.tickers).forEach(function(tk){tmap[tk]=(tmap[tk]||0)+dm.tickers[tk];});
-    }
-    // bottom day: adverse excursion per ticker
-    if(bi>=si+1){
-      var bm=dayMap[dd.botDay];
-      Object.keys(bm.aeTickers).forEach(function(tk){tmap[tk]=(tmap[tk]||0)+bm.aeTickers[tk];});
-    }
+    for(var di=si+1;di<bi;di++){var dm=dayMap[dayOrder[di]];Object.keys(dm.tickers).forEach(function(tk){tmap[tk]=(tmap[tk]||0)+dm.tickers[tk];});}
+    if(bi>=si+1){var bm=dayMap[dd.botDay];Object.keys(bm.aeTickers).forEach(function(tk){tmap[tk]=(tmap[tk]||0)+bm.aeTickers[tk];});}
     return{depth:dd.depth,startDate:dd.pkDay,botDate:dd.botDay,tmap:tmap};
   });
 
-  // --- days sorted for best/worst ---
   var days=dayOrder.map(function(d){return{day:d,pnl:dayMap[d].pnl,ae:dayMap[d].ae,tickers:dayMap[d].tickers,aeTickers:dayMap[d].aeTickers};});
   days.sort(function(a,b){return a.pnl-b.pnl;});
-  var losingDays=days.filter(function(d){return d.pnl<0;});
-  var winningDays=days.filter(function(d){return d.pnl>0;});
-  function avgOf(arr){if(!arr.length)return 0;return arr.reduce(function(s,d){return s+d.pnl;},0)/arr.length;}
-
-  // --- top10 intraday worst days ---
+  var losingDays=days.filter(function(d){return d.pnl<0;}),winningDays=days.filter(function(d){return d.pnl>0;});
+  function avgOf(a){if(!a.length)return 0;return a.reduce(function(s,d){return s+d.pnl;},0)/a.length;}
   var top10intraday=days.slice().sort(function(a,b){return a.ae-b.ae;}).filter(function(d){return d.ae<0;}).slice(0,10);
 
-  // --- ticker summary ---
   var tickerMap={};
   all.forEach(function(t){
     if(!tickerMap[t.ticker])tickerMap[t.ticker]={pnl:0,count:0,wins:0};
-    tickerMap[t.ticker].pnl+=t.pnl; tickerMap[t.ticker].count++;
-    if(t.pnl>0)tickerMap[t.ticker].wins++;
+    tickerMap[t.ticker].pnl+=t.pnl;tickerMap[t.ticker].count++;if(t.pnl>0)tickerMap[t.ticker].wins++;
   });
+  var wins=all.filter(function(t){return t.pnl>0;}),losses=all.filter(function(t){return t.pnl<0;});
 
-  var wins=all.filter(function(t){return t.pnl>0;});
-  var losses=all.filter(function(t){return t.pnl<0;});
-
-  return{all:all,equity:equity,dayLabels:dayOrder,dayEquity:dayEquity,
-    totalPnl:cum,count:all.length,
-    winRate:(wins.length/all.length*100).toFixed(1),
+  return{all:all,equity:equity,dayLabels:dayOrder,dayEquity:dayEquity,weekLabels:weekOrder,weekEquity:weekEquity,monthLabels:monthOrder,monthEquity:monthEquity,
+    totalPnl:cum,count:all.length,winRate:(wins.length/all.length*100).toFixed(1),
     avgWin:wins.length?wins.reduce(function(s,t){return s+t.pnl;},0)/wins.length:0,
     avgLoss:losses.length?losses.reduce(function(s,t){return s+t.pnl;},0)/losses.length:0,
     top10dd:top10dd,worst10:days.slice(0,10),best10:days.slice(-10).reverse(),
@@ -239,14 +250,33 @@ function getAccountTrades(accId){
   var grpA=S.groups.find(function(g){return g.id===S.rotGrpA;});
   var grpB=S.groups.find(function(g){return g.id===S.rotGrpB;});
   if(!grpA||!grpB)return[];
-  function grpTrades(grp,src){var arr=[];grp.sids.forEach(function(sid){var st=S.strategies.find(function(x){return x.id===sid;});if(st)st.trades.forEach(function(t){arr.push({dt:t.dt,pnl:t.pnl,day:t.day,ae:t.ae,ticker:st.ticker,src:src});});});return arr;}
+  function grpTrades(grp,src){var arr=[];grp.sids.forEach(function(sid){var st=S.strategies.find(function(x){return x.id===sid;});if(st)st.trades.forEach(function(t){arr.push({entryDt:t.entryDt,dt:t.dt,pnl:t.pnl,ae:t.ae,day:t.day,ticker:st.ticker,src:src});});});return arr;}
   var allT=grpTrades(grpA,'A').concat(grpTrades(grpB,'B')).sort(function(a,b){return a.dt-b.dt;});
   if(!allT.length)return[];
   var periods=buildPeriods(allT[0].dt);
   var filtered=allT.filter(function(t){var pi=periodIdx(t.dt,periods),even=pi%2===0;return accId==='A'?(even?t.src==='A':t.src==='B'):(even?t.src==='B':t.src==='A');});
   var grouped={};
-  filtered.forEach(function(t){if(!grouped[t.ticker])grouped[t.ticker]=[];grouped[t.ticker].push({dt:t.dt,pnl:t.pnl,day:t.day,ae:t.ae});});
+  filtered.forEach(function(t){if(!grouped[t.ticker])grouped[t.ticker]=[];grouped[t.ticker].push({entryDt:t.entryDt,dt:t.dt,pnl:t.pnl,ae:t.ae,day:t.day});});
   return Object.keys(grouped).map(function(tk){return{ticker:tk,trades:grouped[tk]};});
+}
+
+function makeChartOpts(){
+  return{
+    responsive:true,maintainAspectRatio:false,
+    plugins:{
+      legend:{display:false},
+      tooltip:{callbacks:{label:function(ctx){
+        var val=ctx.parsed.y,idx=ctx.dataIndex,data=ctx.dataset.data,prev=idx>0?data[idx-1]:null;
+        var s=' Баланс: $'+val.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+        if(prev!==null){var d=val-prev,sg=d>=0?'+':'';s+='   Зміна: '+sg+d.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});}
+        return s;
+      }}}
+    },
+    scales:{
+      x:{ticks:{maxTicksLimit:6,autoSkip:true,maxRotation:0},grid:{display:false}},
+      y:{ticks:{callback:function(v){return '$'+v.toLocaleString();}},grid:{color:'rgba(128,128,128,.1)'}}
+    }
+  };
 }
 
 function renderBlock(tg,cid){
@@ -254,10 +284,10 @@ function renderBlock(tg,cid){
   var c=document.getElementById(cid);
   if(!c)return;
   if(!data||!data.count){c.innerHTML='<p style="color:#888;padding:.5rem 0;font-size:13px">Немає трейдів.</p>';return;}
-  var html='';
-  html+='<div class="metrics" id="'+cid+'_m"></div>';
-  html+='<div class="section"><div class="row" style="margin-bottom:.5rem"><h3 style="margin:0;flex:1">Equity curve</h3>';
-  html+='<div class="seg" style="margin:0;width:220px"><div class="seg-btn on" id="'+cid+'_vt">По трейдах</div><div class="seg-btn" id="'+cid+'_vd">По днях</div></div></div>';
+
+  var html='<div class="metrics" id="'+cid+'_m"></div>';
+  html+='<div class="section"><h3>Equity curve</h3>';
+  html+='<div class="seg"><div class="seg-btn on" id="'+cid+'_vt">По трейдах</div><div class="seg-btn" id="'+cid+'_vd">По днях</div><div class="seg-btn" id="'+cid+'_vw">По тижнях</div><div class="seg-btn" id="'+cid+'_vm">По місяцях</div></div>';
   html+='<div class="chart-wrap"><canvas id="'+cid+'_cv"></canvas></div></div>';
   html+='<div class="section"><h3>Топ-10 просадок (з урахуванням просадки в моменті)</h3>';
   html+='<table><thead><tr><th>#</th><th>Пік</th><th>Дно</th><th>Просадка $</th><th>Розшифровка</th></tr></thead><tbody id="'+cid+'_dd"></tbody></table></div>';
@@ -282,33 +312,40 @@ function renderBlock(tg,cid){
     '<div class="mc"><div class="lbl">Сер. прибутк. день</div><div class="val pos">+'+data.avgWinningDay.toFixed(2)+'</div></div>'+
     '<div class="mc"><div class="lbl">Сер. збитк. день</div><div class="val neg">'+data.avgLosingDay.toFixed(2)+'</div></div>';
 
-  function buildChart(view){
+  var vd={
+    t:{labels:data.all.map(function(t){return t.dt.toISOString().slice(0,10);}),vals:data.equity,pts:0},
+    d:{labels:data.dayLabels,vals:data.dayEquity,pts:2},
+    w:{labels:data.weekLabels,vals:data.weekEquity,pts:3},
+    m:{labels:data.monthLabels,vals:data.monthEquity,pts:4}
+  };
+  function buildChart(vk){
     if(charts[cid])charts[cid].destroy();
-    var labels=view==='trades'?data.all.map(function(t){return t.dt.toISOString().slice(0,10);}):data.dayLabels;
-    var vals=view==='trades'?data.equity:data.dayEquity;
-    var clr=(vals.length?vals[vals.length-1]:0)>=0?'#1a9e70':'#c94040';
+    var v=vd[vk];
+    var clr=(v.vals.length?v.vals[v.vals.length-1]:0)>=0?'#1a9e70':'#c94040';
     charts[cid]=new Chart(document.getElementById(cid+'_cv'),{type:'line',
-      data:{labels:labels,datasets:[{data:vals,borderColor:clr,borderWidth:1.5,pointRadius:view==='days'?2:0,fill:{target:'origin',above:'rgba(26,158,112,.07)',below:'rgba(201,64,64,.07)'}}]},
-      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
-        scales:{x:{ticks:{maxTicksLimit:6,autoSkip:true,maxRotation:0},grid:{display:false}},
-                y:{ticks:{callback:function(v){return '$'+v.toLocaleString();}},grid:{color:'rgba(128,128,128,.1)'}}}}});
+      data:{labels:v.labels,datasets:[{data:v.vals,borderColor:clr,borderWidth:1.5,pointRadius:v.pts,fill:{target:'origin',above:'rgba(26,158,112,.07)',below:'rgba(201,64,64,.07)'}}]},
+      options:makeChartOpts()});
   }
-  buildChart('trades');
-  document.getElementById(cid+'_vt').addEventListener('click',function(){document.getElementById(cid+'_vt').classList.add('on');document.getElementById(cid+'_vd').classList.remove('on');buildChart('trades');});
-  document.getElementById(cid+'_vd').addEventListener('click',function(){document.getElementById(cid+'_vd').classList.add('on');document.getElementById(cid+'_vt').classList.remove('on');buildChart('days');});
+  buildChart('t');
+  ['t','d','w','m'].forEach(function(vk){
+    var el=document.getElementById(cid+'_v'+vk);
+    if(!el)return;
+    el.addEventListener('click',function(){
+      ['t','d','w','m'].forEach(function(x){var e=document.getElementById(cid+'_v'+x);if(e)e.classList.remove('on');});
+      el.classList.add('on');buildChart(vk);
+    });
+  });
 
   var ddb=document.getElementById(cid+'_dd');
   data.top10dd.forEach(function(dd,i){
     var b=Object.keys(dd.tmap).map(function(t){return bdg(t,t+': '+fmt(dd.tmap[t]));}).join('');
     ddb.innerHTML+='<tr><td>'+(i+1)+'</td><td>'+(dd.startDate||'-')+'</td><td>'+(dd.botDate||'-')+'</td><td style="color:#c94040;font-weight:500">-'+fmtAbs(dd.depth)+'</td><td>'+(b||'-')+'</td></tr>';
   });
-
   var idb=document.getElementById(cid+'_id');
   data.top10intraday.forEach(function(d){
     var b=Object.keys(d.aeTickers).map(function(t){return bdg(t,t+': '+fmt(d.aeTickers[t]));}).join('');
     idb.innerHTML+='<tr><td>'+d.day+'</td><td style="color:'+pclr(d.pnl)+';font-weight:500">'+fmt(d.pnl)+'</td><td style="color:#c94040;font-weight:500">'+fmt(d.ae)+'</td><td>'+(b||'-')+'</td></tr>';
   });
-
   function fillDay(id,arr){
     var tb=document.getElementById(id);
     arr.forEach(function(d){
@@ -318,7 +355,6 @@ function renderBlock(tg,cid){
   }
   fillDay(cid+'_bd',data.worst10);
   fillDay(cid+'_gd',data.best10);
-
   var tkb=document.getElementById(cid+'_tk');
   Object.keys(data.tickerMap).sort(function(a,b){return data.tickerMap[b].pnl-data.tickerMap[a].pnl;}).forEach(function(t){
     var v=data.tickerMap[t];
@@ -331,7 +367,6 @@ function stepDots(){
   var cur=S.mode==='single'?(S.step===1?1:2):Math.min(S.step,4);
   return names.map(function(_,i){var n=i+1,cls=n<cur?'done':n===cur?'active':'';return '<div class="step-dot '+cls+'"></div>';}).join('')+'<span class="step-lbl">'+names[cur-1]+'</span>';
 }
-
 function step1(){
   var chips=Object.keys(S.rawFiles).map(function(k){return '<div class="chip">'+bdg(tickerOf(k))+' <span style="font-size:11px">'+k+'</span><span class="rm" data-rm="'+k+'">&#x2715;</span></div>';}).join('');
   var has=Object.keys(S.rawFiles).length>0;
@@ -345,7 +380,6 @@ function step1(){
     '<div class="seg"><div class="seg-btn '+(S.mode==='single'?'on':'')+'" data-mode="single">Один рахунок</div><div class="seg-btn '+(S.mode==='multi'?'on':'')+'" data-mode="multi">Два рахунки / групи</div></div>'+
     '<button class="btn btn-full btn-green" id="btn-next" '+(has?'':'disabled')+'>'+(S.mode==='single'?'Розрахувати &#8594;':'Далі: групи &#8594;')+'</button>';
 }
-
 function step2(){
   var rows=S.strategies.map(function(s){
     var ag=S.groups.find(function(g){return g.sids.indexOf(s.id)>=0;});
@@ -354,30 +388,28 @@ function step2(){
   }).join('');
   var cards=S.groups.map(function(g){
     var strs=S.strategies.filter(function(s){return g.sids.indexOf(s.id)>=0;});
-    return '<div class="card"><div class="row" style="margin-bottom:4px"><span class="dot" style="background:'+GCOLS[g.ci%GCOLS.length]+'"></span><input type="text" class="gnm" data-gid="'+g.id+'" value="'+g.name+'" style="flex:1;border:none;background:transparent;font-size:13px;font-weight:500;outline:none">'+(S.groups.length>1?'<span class="rm" data-rmg="'+g.id+'" style="font-size:11px;cursor:pointer;color:#c33">видалити</span>':'')+
-    '</div><p style="font-size:12px;color:#888">'+(strs.length?strs.map(function(s){return bdg(s.ticker);}).join(''):'&#8212; порожня &#8212;')+' ('+strs.length+')</p></div>';
+    return '<div class="card"><div class="row" style="margin-bottom:4px"><span class="dot" style="background:'+GCOLS[g.ci%GCOLS.length]+'"></span>'+
+      '<input type="text" class="gnm" data-gid="'+g.id+'" value="'+g.name+'" style="flex:1;border:none;background:transparent;font-size:13px;font-weight:500;outline:none">'+
+      (S.groups.length>1?'<span class="rm" data-rmg="'+g.id+'" style="font-size:11px;cursor:pointer;color:#c33">видалити</span>':'')+
+      '</div><p style="font-size:12px;color:#888">'+(strs.length?strs.map(function(s){return bdg(s.ticker);}).join(''):'&#8212; порожня &#8212;')+' ('+strs.length+')</p></div>';
   }).join('');
   return '<h2>Розподіл по групах</h2><div style="margin-bottom:1rem">'+rows+'</div><hr>'+
     '<div class="row" style="margin-bottom:.5rem"><h3 style="margin:0;flex:1">Групи</h3><button class="btn" id="btn-ag" style="font-size:11px;padding:2px 8px">+ Додати групу</button></div>'+
     cards+'<div class="row" style="margin-top:1rem"><button class="btn" id="btn-back">&#8592; Назад</button><button class="btn btn-full btn-green" id="btn-next">Далі: акаунти &#8594;</button></div>';
 }
-
 function step3(){
   var grpOpts=function(sel){return S.groups.map(function(g){return '<option value="'+g.id+'" '+(g.id===sel?'selected':'')+'>'+g.name+'</option>';}).join('');};
   var body=S.rotEnabled?
     '<div style="margin-top:.75rem"><p style="font-size:12px;color:#888;margin-bottom:.4rem">Рахунок A починає з:</p><select id="rot-a">'+grpOpts(S.rotGrpA)+'</select>'+
     '<p style="font-size:11px;color:#aaa;margin-top:4px">Рахунок B &#8212; протилежна група. Далі чергуються.</p>'+
     '<p style="font-size:12px;color:#888;margin:.75rem 0 .3rem">Період ротації:</p>'+
-    '<div class="seg" style="max-width:360px"><div class="seg-btn '+(S.rotPeriod==='daily'?'on':'')+'" data-period="daily">Денна</div><div class="seg-btn '+(S.rotPeriod==='weekly'?'on':'')+'" data-period="weekly">Тижнева</div><div class="seg-btn '+(S.rotPeriod==='monthly'?'on':'')+'" data-period="monthly">Місячна</div></div></div>':
-    ['A','B'].map(function(acc){
-      return '<div class="card"><p style="font-weight:500;margin-bottom:.4rem;font-size:13px">Рахунок '+acc+'</p>'+
-        S.groups.map(function(g){return '<div class="row" style="padding:3px 0;font-size:13px"><input type="checkbox" data-acc="'+acc+'" data-gid="'+g.id+'" '+((S.accGrps[acc]||[]).indexOf(g.id)>=0?'checked':'')+'>'+
-          '<span class="dot" style="background:'+GCOLS[g.ci%GCOLS.length]+'"></span> '+g.name+'</div>';}).join('')+'</div>';
-    }).join('');
+    '<div class="seg"><div class="seg-btn '+(S.rotPeriod==='daily'?'on':'')+'" data-period="daily">Денна</div><div class="seg-btn '+(S.rotPeriod==='weekly'?'on':'')+'" data-period="weekly">Тижнева</div><div class="seg-btn '+(S.rotPeriod==='monthly'?'on':'')+'" data-period="monthly">Місячна</div></div></div>':
+    ['A','B'].map(function(acc){return '<div class="card"><p style="font-weight:500;margin-bottom:.4rem;font-size:13px">Рахунок '+acc+'</p>'+
+      S.groups.map(function(g){return '<div class="row" style="padding:3px 0;font-size:13px"><input type="checkbox" data-acc="'+acc+'" data-gid="'+g.id+'" '+((S.accGrps[acc]||[]).indexOf(g.id)>=0?'checked':'')+'>'+
+        '<span class="dot" style="background:'+GCOLS[g.ci%GCOLS.length]+'"></span> '+g.name+'</div>';}).join('')+'</div>';}).join('');
   return '<h2>Налаштування рахунків</h2><div class="row" style="margin-bottom:.75rem"><div class="tog '+(S.rotEnabled?'on':'')+'" id="rot-tog"></div><span style="font-size:13px">Ротація груп між рахунками</span></div>'+
     body+'<div class="row" style="margin-top:1rem"><button class="btn" id="btn-back">&#8592; Назад</button><button class="btn btn-full btn-green" id="btn-next">Розрахувати &#8594;</button></div>';
 }
-
 function step4(){
   var multi=S.mode==='multi';
   return '<h2>'+(multi?'Результати по рахунках':'Результати')+'</h2>'+
@@ -397,7 +429,6 @@ function render(){
   },50);
 }
 function advance(){if(S.mode==='single')S.step=2;else if(S.step===1)S.step=2;else if(S.step===2)S.step=3;else S.step=4;render();}
-
 function bind(){
   var fi=document.getElementById('fi');
   if(fi)fi.addEventListener('change',function(e){Array.from(e.target.files).forEach(function(f){S.rawFiles[f.name]=f;});render();});
