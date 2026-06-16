@@ -81,8 +81,13 @@ function parseFile(filename,file,cb){
       var type=(r['Type']||r['type']||'').toString().trim().toLowerCase();
       var dt=parseDate(r['Date and time']||r['date and time']||r['Date']);if(!dt)return;
       if(!byNum[num])byNum[num]={};
-      if(type.indexOf('entry')>=0){byNum[num].entryDt=dt;}
-      else if(type.indexOf('exit')>=0){
+      if(type.indexOf('entry')>=0){
+        byNum[num].entryDt=dt;
+        var dir='';
+        if(type.indexOf('long')>=0)dir='long';
+        else if(type.indexOf('short')>=0)dir='short';
+        byNum[num].direction=dir;
+      } else if(type.indexOf('exit')>=0){
         byNum[num].exitDt=dt;
         byNum[num].pnl=parseFloat(r['Net P&L USD']||r['Net P&L']||r['Net PnL USD']||r['Net PnL']||0);
         byNum[num].ae=Math.min(0,parseFloat(r['Adverse excursion USD']||r['Adverse excursion']||0));
@@ -91,7 +96,7 @@ function parseFile(filename,file,cb){
     var trades=[];
     Object.keys(byNum).forEach(function(num){
       var t=byNum[num];if(!t.exitDt||isNaN(t.pnl))return;
-      trades.push({entryDt:t.entryDt||t.exitDt,dt:t.exitDt,pnl:t.pnl,ae:t.ae||0,day:tradingDay(t.exitDt)});
+      trades.push({entryDt:t.entryDt||t.exitDt,dt:t.exitDt,pnl:t.pnl,ae:t.ae||0,day:tradingDay(t.exitDt),direction:t.direction||''});
     });
     trades.sort(function(a,b){return a.dt-b.dt;});
     cb({id:uid(),filename:filename,ticker:ticker,trades:trades});
@@ -279,13 +284,23 @@ function makeChartOpts(){
   };
 }
 
-function renderBlock(tg,cid){
-  var data=analyze(tg);
+function renderBlock(tg,cid,dirFilter){
+  dirFilter=dirFilter||'all';
+  // filter by direction
+  var ftg=dirFilter==='all'?tg:tg.map(function(g){
+    return{ticker:g.ticker,trades:g.trades.filter(function(t){return !t.direction||t.direction===dirFilter;})};
+  });
+  var data=analyze(ftg);
   var c=document.getElementById(cid);
   if(!c)return;
   if(!data||!data.count){c.innerHTML='<p style="color:#888;padding:.5rem 0;font-size:13px">Немає трейдів.</p>';return;}
 
   var html='<div class="metrics" id="'+cid+'_m"></div>';
+  html+='<div class="seg" style="max-width:260px">';
+  html+='<div class="seg-btn '+(dirFilter==='all'?'on':'')+'" id="'+cid+'_fall">Всі</div>';
+  html+='<div class="seg-btn '+(dirFilter==='long'?'on':'')+'" id="'+cid+'_flong">&#x25B2; Long</div>';
+  html+='<div class="seg-btn '+(dirFilter==='short'?'on':'')+'" id="'+cid+'_fshort">&#x25BC; Short</div>';
+  html+='</div>';
   html+='<div class="section"><h3>Equity curve</h3>';
   html+='<div class="seg"><div class="seg-btn on" id="'+cid+'_vt">По трейдах</div><div class="seg-btn" id="'+cid+'_vd">По днях</div><div class="seg-btn" id="'+cid+'_vw">По тижнях</div><div class="seg-btn" id="'+cid+'_vm">По місяцях</div></div>';
   html+='<div class="chart-wrap"><canvas id="'+cid+'_cv"></canvas></div></div>';
@@ -360,6 +375,13 @@ function renderBlock(tg,cid){
     var v=data.tickerMap[t];
     tkb.innerHTML+='<tr><td>'+bdg(t)+'</td><td>'+v.count+'</td><td style="color:'+pclr(v.pnl)+';font-weight:500">'+fmt(v.pnl)+'</td><td>'+(v.wins/v.count*100).toFixed(1)+'%</td></tr>';
   });
+  // direction filter buttons
+  var df=document.getElementById(cid+'_fall');
+  var dl=document.getElementById(cid+'_flong');
+  var ds=document.getElementById(cid+'_fshort');
+  if(df)df.addEventListener('click',function(){renderBlock(tg,cid,'all');});
+  if(dl)dl.addEventListener('click',function(){renderBlock(tg,cid,'long');});
+  if(ds)ds.addEventListener('click',function(){renderBlock(tg,cid,'short');});
 }
 
 function stepDots(){
